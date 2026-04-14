@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Diff Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>API Diff Tool - 接口差异对比工具</h1>
+        </div>
+
+        <div class="main-layout">
+            <!-- 左侧边栏 -->
+            <div class="sidebar" id="sidebar">
+                <div class="panel">
+                    <div class="panel-title flex">
+                        <span class="flex-1">项目管理</span>
+                        <div style="display:flex;gap:4px;align-items:center;">
+                            <select id="projectSort" class="sort-select" onchange="onSortChange('projects', this.value)">
+                                <option value="default">默认排序</option>
+                                <option value="name_asc">名称↑</option>
+                                <option value="name_desc">名称↓</option>
+                                <option value="time_desc">最新优先</option>
+                                <option value="time_asc">最早优先</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" onclick="openProjectModal()">+ 新建</button>
+                        </div>
+                    </div>
+                    <div id="projectList" class="sortable-list"><div class="empty-tip">暂无项目</div></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title flex">
+                        <span class="flex-1">环境管理</span>
+                        <div style="display:flex;gap:4px;align-items:center;">
+                            <select id="envSort" class="sort-select" onchange="onSortChange('environments', this.value)">
+                                <option value="default">默认排序</option>
+                                <option value="name_asc">名称↑</option>
+                                <option value="name_desc">名称↓</option>
+                                <option value="time_desc">最新优先</option>
+                                <option value="time_asc">最早优先</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" id="addEnvBtn" onclick="openEnvModal()">+ 新建</button>
+                        </div>
+                    </div>
+                    <div id="envList" class="sortable-list"><div class="empty-tip">请先选择项目</div></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title flex">
+                        <span class="flex-1">分组管理</span>
+                        <div style="display:flex;gap:4px;align-items:center;">
+                            <select id="groupSort" class="sort-select" onchange="onSortChange('groups', this.value)">
+                                <option value="default">默认排序</option>
+                                <option value="name_asc">名称↑</option>
+                                <option value="name_desc">名称↓</option>
+                                <option value="time_desc">最新优先</option>
+                                <option value="time_asc">最早优先</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" id="addGroupBtn" onclick="openGroupModal()" style="display:none">+ 新建</button>
+                            <button class="btn btn-accent btn-sm" id="importApiBtn" onclick="openImportModal()" style="display:none">导入</button>
+                        </div>
+                    </div>
+                    <div id="groupList" class="sortable-list"><div class="empty-tip">请先选择项目</div></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title flex">
+                        <span class="flex-1">API列表</span>
+                        <div style="display:flex;gap:4px;align-items:center;">
+                            <select id="apiSort" class="sort-select" onchange="onSortChange('apis', this.value)">
+                                <option value="default">默认排序</option>
+                                <option value="name_asc">名称↑</option>
+                                <option value="name_desc">名称↓</option>
+                                <option value="time_desc">最新优先</option>
+                                <option value="time_asc">最早优先</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" id="addApiBtn" onclick="openApiModal()" style="display:none">+ 新建</button>
+                        </div>
+                    </div>
+                    <div id="apiList" class="sortable-list"><div class="empty-tip">请先选择分组</div></div>
+                </div>
+            </div>
+
+            <!-- 拖拽调整条 -->
+            <div class="resizer" id="resizer"></div>
+
+            <!-- 右侧：对比操作 -->
+            <div class="main-content">
+                <div class="panel">
+                    <div class="panel-title">API对比</div>
+                    <div class="form-group">
+                        <label>选择API</label>
+                        <select id="diffApiSelect" onchange="onDiffApiChange()">
+                            <option value="">-- 请选择API --</option>
+                        </select>
+                    </div>
+
+                    <div class="grid">
+                        <div>
+                            <div class="form-group">
+                                <label>环境1</label>
+                                <select id="env1Select" onchange="onEnvChange(1)">
+                                    <option value="">-- 手动输入URL --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>环境1 完整URL</label>
+                                <input type="text" id="url1" placeholder="http://localhost:8080/api/user/info">
+                            </div>
+                            <!-- 请求头 -->
+                            <div class="form-group">
+                                <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
+                                    <label>请求头</label>
+                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode(event, 'headers1')">切换格式</button>
+                                </div>
+                                <div id="headers1-kv-container" class="kv-container">
+                                    <div class="kv-list" id="headers1-kv-list">
+                                        <div class="kv-row">
+                                            <input type="text" placeholder="key" class="kv-key">
+                                            <input type="text" placeholder="value" class="kv-value">
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers1')" style="margin-top: 5px;">+ 添加</button>
+                                </div>
+                                <textarea id="headers1" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
+                            </div>
+                            <!-- 请求体 -->
+                            <div class="form-group">
+                                <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
+                                    <label>请求体</label>
+                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('body1')">切换为Key-Value</button>
+                                </div>
+                                <div id="body1-kv-container" class="kv-container hidden">
+                                    <div class="kv-list" id="body1-kv-list">
+                                        <div class="kv-row">
+                                            <input type="text" placeholder="key" class="kv-key">
+                                            <input type="text" placeholder="value" class="kv-value">
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body1')" style="margin-top: 5px;">+ 添加</button>
+                                </div>
+                                <textarea id="body1" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group">
+                                <label>环境2</label>
+                                <select id="env2Select" onchange="onEnvChange(2)">
+                                    <option value="">-- 手动输入URL --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>环境2 完整URL</label>
+                                <input type="text" id="url2" placeholder="http://localhost:8090/api/user/info">
+                            </div>
+                            <!-- Header -->
+                            <div class="form-group">
+                                <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
+                                    <label>请求头</label>
+                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('headers2', event)">切换格式</button>
+                                </div>
+                                <div id="headers2-kv-container" class="kv-container">
+                                    <div class="kv-list" id="headers2-kv-list">
+                                        <div class="kv-row">
+                                            <input type="text" placeholder="key" class="kv-key">
+                                            <input type="text" placeholder="value" class="kv-value">
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers2')" style="margin-top: 5px;">+ 添加</button>
+                                </div>
+                                <textarea id="headers2" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
+                            </div>
+                            <!-- Body -->
+                            <div class="form-group">
+                                <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
+                                    <label>请求体</label>
+                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('body2', event)">切换为Key-Value</button>
+                                </div>
+                                <div id="body2-kv-container" class="kv-container hidden">
+                                    <div class="kv-list" id="body2-kv-list">
+                                        <div class="kv-row">
+                                            <input type="text" placeholder="key" class="kv-key">
+                                            <input type="text" placeholder="value" class="kv-value">
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body2')" style="margin-top: 5px;">+ 添加</button>
+                                </div>
+                                <textarea id="body2" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>请求方法</label>
+                        <select id="method">
+                            <option value="GET">GET</option>
+                            <option value="POST" selected>POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-success" onclick="executeDiff()">执行对比</button>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">对比结果</div>
+                    <div id="diffResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 项目弹窗 ========== -->
+    <div id="projectModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="projectModalTitle">新建项目</h3>
+            <input type="hidden" id="editProjectId" value="">
+            <div class="form-group">
+                <label>项目名称</label>
+                <input type="text" id="projectName">
+            </div>
+            <div class="form-group">
+                <label>描述</label>
+                <textarea id="projectDesc"></textarea>
+            </div>
+            <div class="flex">
+                <button class="btn btn-primary" onclick="saveProject()">保存</button>
+                <button class="btn btn-default" onclick="closeModal('projectModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 环境弹窗 ========== -->
+    <div id="envModal" class="modal-overlay">
+        <div class="modal-box" style="width:500px;">
+            <h3 id="envModalTitle">新建环境</h3>
+            <input type="hidden" id="editEnvId" value="">
+            <div class="form-group">
+                <label>环境名称</label>
+                <input type="text" id="envName" placeholder="例如: dev / test / prod">
+            </div>
+            <div class="form-group">
+                <label>基础URL (Base URL)</label>
+                <input type="text" id="envBaseUrl" placeholder="http://localhost:8080">
+            </div>
+            <!-- 默认请求头 -->
+            <div class="form-group">
+                <div class="flex" style="justify-content:space-between;margin-bottom:5px;">
+                    <label>默认请求头</label>
+                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('envDefaultHeaders')">切换为JSON</button>
+                </div>
+                <div id="envDefaultHeaders-kv-container" class="kv-container">
+                    <div class="kv-list" id="envDefaultHeaders-kv-list">
+                        <div class="kv-row">
+                            <input type="text" placeholder="key" class="kv-key">
+                            <input type="text" placeholder="value" class="kv-value">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('envDefaultHeaders')" style="margin-top:5px;">+ 添加</button>
+                </div>
+                <textarea id="envDefaultHeaders" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
+            </div>
+            <!-- 默认请求体 -->
+            <div class="form-group">
+                <div class="flex" style="justify-content:space-between;margin-bottom:5px;">
+                    <label>默认请求体</label>
+                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('envDefaultBody')">切换为Key-Value</button>
+                </div>
+                <div id="envDefaultBody-kv-container" class="kv-container hidden">
+                    <div class="kv-list" id="envDefaultBody-kv-list">
+                        <div class="kv-row">
+                            <input type="text" placeholder="key" class="kv-key">
+                            <input type="text" placeholder="value" class="kv-value">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('envDefaultBody')" style="margin-top:5px;">+ 添加</button>
+                </div>
+                <textarea id="envDefaultBody" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
+            </div>
+            <div class="form-group">
+                <label>描述</label>
+                <textarea id="envDesc"></textarea>
+            </div>
+            <div class="flex">
+                <button class="btn btn-primary" onclick="saveEnv()">保存</button>
+                <button class="btn btn-default" onclick="closeModal('envModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 分组弹窗 ========== -->
+    <div id="groupModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="groupModalTitle">新建分组</h3>
+            <input type="hidden" id="editGroupId" value="">
+            <div class="form-group">
+                <label>分组名称</label>
+                <input type="text" id="groupName">
+            </div>
+            <div class="form-group">
+                <label>描述</label>
+                <textarea id="groupDesc"></textarea>
+            </div>
+            <div class="flex">
+                <button class="btn btn-primary" onclick="saveGroup()">保存</button>
+                <button class="btn btn-default" onclick="closeModal('groupModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== API弹窗 ========== -->
+    <div id="apiModal" class="modal-overlay">
+        <div class="modal-box" style="width:500px;">
+            <h3 id="apiModalTitle">新建API</h3>
+            <input type="hidden" id="editApiId" value="">
+            <div class="form-group">
+                <label>API名称</label>
+                <input type="text" id="apiName" placeholder="例如: 用户登录接口">
+            </div>
+            <div class="form-group">
+                <label>Path</label>
+                <input type="text" id="apiPath" placeholder="/api/user/login">
+            </div>
+            <div class="form-group">
+                <label>请求方法</label>
+                <select id="apiMethod">
+                    <option value="GET">GET</option>
+                    <option value="POST" selected>POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <!-- API Headers -->
+            <div class="form-group">
+                <label class="flex">
+                    <span class="flex-1">请求头</span>
+                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('apiHeaders', event)">切换格式</button>
+                </label>
+                <div id="apiHeaders-kv-container" class="kv-container">
+                    <div class="kv-list" id="apiHeaders-kv-list">
+                        <div class="kv-row">
+                            <input type="text" class="kv-key" placeholder="key">
+                            <input type="text" class="kv-value" placeholder="value">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('apiHeaders')" style="margin-top: 5px;">+ 添加</button>
+                </div>
+                <textarea id="apiHeaders" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
+            </div>
+            <!-- API Body -->
+            <div class="form-group">
+                <label class="flex">
+                    <span class="flex-1">请求体</span>
+                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('apiBody', event)">切换为Key-Value</button>
+                </label>
+                <div id="apiBody-kv-container" class="kv-container hidden">
+                    <div class="kv-list" id="apiBody-kv-list">
+                        <div class="kv-row">
+                            <input type="text" class="kv-key" placeholder="key">
+                            <input type="text" class="kv-value" placeholder="value">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('apiBody')" style="margin-top: 5px;">+ 添加</button>
+                </div>
+                <textarea id="apiBody" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
+            </div>
+            <div class="form-group">
+                <label>描述</label>
+                <textarea id="apiDesc"></textarea>
+            </div>
+            <div class="flex">
+                <button class="btn btn-primary" onclick="saveApi()">保存</button>
+                <button class="btn btn-default" onclick="closeModal('apiModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== OpenAPI导入弹窗 ========== -->
+    <div id="importApiModal" class="modal-overlay">
+        <div class="modal-box" style="width:600px;max-height:80vh;overflow-y:auto;">
+            <h3>导入OpenAPI/Swagger JSON</h3>
+            <p style="color:#888;font-size:13px;margin-bottom:12px;">支持OpenAPI 2.0/3.x规范，将自动解析paths下的所有接口（仅导入名称、路径、请求方法）</p>
+            <div class="form-group">
+                <label>选择文件或粘贴JSON</label>
+                <input type="file" id="importFileInput" accept=".json,.yaml,.yml" onchange="handleImportFile(event)">
+            </div>
+            <div class="form-group">
+                <label>OpenAPI JSON内容</label>
+                <textarea id="importJsonContent" style="width:100%;height:300px;font-family:monospace;font-size:12px;" placeholder='粘贴OpenAPI/Swagger JSON内容，例如：
+{
+  "openapi": "3.0.0",
+  "info": { "title": "示例API" },
+  "paths": {
+    "/api/users": {
+      "get": { "summary": "获取用户列表" },
+      "post": { "summary": "创建用户" }
+    }
+  }
+}'></textarea>
+            </div>
+            <div class="flex">
+                <button class="btn btn-primary" onclick="importOpenAPI()">开始导入</button>
+                <button class="btn btn-default" onclick="closeModal('importApiModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

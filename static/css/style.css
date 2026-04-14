@@ -1,0 +1,217 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+.header { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.header h1 { color: #333; font-size: 24px; }
+
+.panel { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: left; }
+.panel-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; text-align: left; }
+
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; color: #666; font-size: 14px; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+.form-group textarea { min-height: 80px; font-family: monospace; }
+
+.btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+.btn-primary { background: #007bff; color: #fff; }
+.btn-primary:hover { background: #0056b3; }
+.btn-success { background: #28a745; color: #fff; }
+.btn-success:hover { background: #1e7e34; }
+.btn-danger { background: #dc3545; color: #fff; }
+.btn-danger:hover { background: #c82333; }
+.btn-warning { background: #ffc107; color: #333; }
+.btn-warning:hover { background: #e0a800; }
+.btn-default { background: #6c757d; color: #fff; }
+.btn-default:hover { background: #5a6268; }
+.btn-accent { background: #6f42c1; color: #fff; }
+.btn-accent:hover { background: #5a32a3; }
+.btn-sm { padding: 4px 8px; font-size: 12px; }
+
+.flex { display: flex; gap: 10px; align-items: center; }
+.flex-1 { flex: 1; }
+
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+
+.tree-item { padding: 8px 10px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
+.tree-item:hover { background: #f0f0f0; }
+.tree-item.active { background: #e3f2fd; }
+.tree-item .actions { display: flex; gap: 4px; margin-left: auto; }
+
+.result { padding: 15px; border-radius: 4px; margin-top: 15px; }
+.result-success { background: #d4edda; border: 1px solid #c3e6cb; }
+.result-error { background: #f8d7da; border: 1px solid #f5c6cb; }
+
+pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+
+.loading { text-align: center; padding: 20px; color: #666; }
+
+/* 弹窗 - 通过JS控制显示隐藏，不使用inline display */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    display: none;
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+    background: #fff;
+    padding: 24px;
+    border-radius: 8px;
+    width: 420px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.modal-box h3 { margin-bottom: 16px; color: #333; }
+.empty-tip { padding: 10px; color: #999; font-size: 14px; }
+
+/* Key-Value 输入样式 */
+.kv-container { border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #fafafa; }
+.kv-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.kv-row:last-child { margin-bottom: 0; }
+.kv-row input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+.kv-row .btn-remove { padding: 4px 8px; font-size: 12px; background: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+.kv-row .btn-remove:hover { background: #c82333; }
+.kv-actions { margin-top: 8px; display: flex; gap: 8px; }
+.kv-actions .btn { padding: 4px 12px; font-size: 12px; }
+.input-mode-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.input-mode-tabs .tab { padding: 4px 12px; font-size: 12px; border: 1px solid #ddd; background: #f5f5f5; cursor: pointer; border-radius: 4px; }
+.input-mode-tabs .tab.active { background: #007bff; color: #fff; border-color: #007bff; }
+.input-panel { display: none; }
+.input-panel.active { display: block; }
+.hidden { display: none !important; }
+
+/* 主布局 - 左右分栏 */
+.main-layout { display: flex; gap: 20px; }
+.sidebar { width: 33.33%; min-width: 300px; max-width: 500px; flex-shrink: 0; }
+.main-content { flex: 1; min-width: 0; }
+
+/* 拖拽分隔条 */
+.resizer {
+    width: 6px;
+    background: #ddd;
+    cursor: col-resize;
+    border-radius: 3px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.resizer:hover, .resizer.dragging { background: #007bff; }
+
+/* ========== 对比结果展示（FeHelper风格：左右并排JSON对比）========== */
+
+/* 统计摘要栏 */
+.diff-summary { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.diff-summary .stat-item { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; }
+.stat-item.stat-added { background: #e8f4fc; color: #1861ab; border: 1px solid #b8daff; }
+.stat-item.stat-removed { background: #fce8e8; color: #c92a2a; border: 1px solid #fccac7; }
+.stat-item.stat-changed { background: #fffbe6; color: #856404; border: 1px solid #ffe69c; }
+.stat-item.stat-tip { background: transparent; color: #dc3545; border: none; font-weight: 600; font-style: italic; }
+.stat-num { font-size: 17px; font-weight: 700; }
+
+/* 左右并排容器 */
+.sbd-container {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.sbd-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+.sbd-header {
+    padding: 8px 14px;
+    background: #f5f5f5;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    user-select: none;
+}
+.sbd-body {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 0;
+    font-family: 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #222;
+    background: #fff;
+    min-height: 300px;
+    max-height: 70vh;
+}
+.sbd-line {
+    padding: 0 14px;
+    white-space: pre;
+    min-height: 1.7em;
+}
+.sbd-divider {
+    width: 3px;
+    background: #ddd;
+    flex-shrink: 0;
+    cursor: col-resize;
+}
+
+/* 差异行高亮 */
+.sbd-del { background: #f8d0d0 !important; }   /* 仅左侧有 - 红色 */
+.sbd-add { background: #d6e8ff !important; }   /* 仅右侧有 - 浅蓝色 */
+.sbd-mod { background: #f0f8d0 !important; }   /* 值不同 - 浅黄绿色 */
+
+/* ========== 纯黑字体（无语法着色）========== */
+.dh-key { color: #000; font-weight: 600; }
+.dh-str { color: #000; }
+.dh-num { color: #000; }
+.dh-bool { color: #000; }
+.dh-null { color: #666; }
+
+/* ========== 排序/拖拽样式 ========== */
+.sort-select {
+    padding: 2px 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #666;
+    background: #f8f9fa;
+    cursor: pointer;
+    width: auto;
+    min-width: 90px;
+}
+.sort-select:hover { border-color: #adb5bd; }
+.sort-select:focus { outline: none; border-color: #007bff; }
+
+.sortable-list { min-height: 30px; }
+
+.drag-handle {
+    cursor: grab;
+    color: #bbb;
+    font-size: 16px;
+    padding: 0 4px;
+    user-select: none;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.drag-handle:hover { color: #666; }
+.drag-handle:active { cursor: grabbing; }
+
+.tree-item.dragging {
+    opacity: 0.4;
+    background: #e3f2fd;
+}
+
+.tree-item.drag-over {
+    border-top: 2px solid #007bff;
+    margin-top: -1px;
+}
+
+.tree-item.sortable {
+    display: flex;
+    align-items: center;
+}
