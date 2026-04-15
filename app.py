@@ -1,10 +1,12 @@
 """
 Flask应用配置和路由
 """
-import json
-from flask import Flask, request, jsonify, render_template
+from typing import Any, Dict, List, Optional, Union
+from flask import Flask, request, jsonify, render_template, Response
+from sqlalchemy.orm import Query
 from models import db, Project, ApiGroup, ApiConfig, Environment, DiffRecord, TestCase, Variable
 from diff_service import DiffService
+from utils import to_json, from_json, parse_json_field, safe_json_dumps
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:WRLwrl123.@127.0.0.1:3306/mydata'
@@ -25,7 +27,7 @@ SORT_MAP = {
     'default': lambda m: m.sort_order.asc(),  # 默认按sort_order
 }
 
-def apply_sort(query, model, sort_key):
+def apply_sort(query: Query, model: Any, sort_key: str) -> Query:
     """根据排序键应用排序，默认 sort_order asc, created_at desc"""
     if sort_key in SORT_MAP:
         query = query.order_by(SORT_MAP[sort_key](model))
@@ -40,11 +42,11 @@ def apply_sort(query, model, sort_key):
 # ==================== 项目管理 ====================
 
 @app.route('/api/projects', methods=['GET'])
-def get_projects():
+def get_projects() -> Response:
     """获取所有项目"""
-    sort_key = request.args.get('sort', 'default')
+    sort_key: str = request.args.get('sort', 'default')
     query = apply_sort(Project.query, Project, sort_key)
-    projects = query.all()
+    projects: List[Project] = query.all()
     return jsonify([{
         'id': p.id,
         'name': p.name,
@@ -55,11 +57,11 @@ def get_projects():
 
 
 @app.route('/api/projects', methods=['POST'])
-def create_project():
+def create_project() -> Response:
     """创建项目"""
-    data = request.json
+    data: Dict[str, Any] = request.json or {}
     project = Project(
-        name=data['name'],
+        name=data.get('name', ''),
         description=data.get('description', '')
     )
     db.session.add(project)
@@ -68,10 +70,10 @@ def create_project():
 
 
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
-def update_project(project_id):
+def update_project(project_id: int) -> Response:
     """更新项目"""
-    project = Project.query.get_or_404(project_id)
-    data = request.json
+    project: Project = Project.query.get_or_404(project_id)
+    data: Dict[str, Any] = request.json or {}
     project.name = data.get('name', project.name)
     project.description = data.get('description', project.description)
     db.session.commit()
@@ -79,9 +81,9 @@ def update_project(project_id):
 
 
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
-def delete_project(project_id):
+def delete_project(project_id: int) -> Response:
     """删除项目"""
-    project = Project.query.get_or_404(project_id)
+    project: Project = Project.query.get_or_404(project_id)
     db.session.delete(project)
     db.session.commit()
     return jsonify({'success': True})
@@ -90,11 +92,11 @@ def delete_project(project_id):
 # ==================== 分组管理 ====================
 
 @app.route('/api/projects/<int:project_id>/groups', methods=['GET'])
-def get_groups(project_id):
+def get_groups(project_id: int) -> Response:
     """获取项目下的所有分组"""
-    sort_key = request.args.get('sort', 'default')
+    sort_key: str = request.args.get('sort', 'default')
     query = apply_sort(ApiGroup.query.filter_by(project_id=project_id), ApiGroup, sort_key)
-    groups = query.all()
+    groups: List[ApiGroup] = query.all()
     return jsonify([{
         'id': g.id,
         'name': g.name,
@@ -105,12 +107,12 @@ def get_groups(project_id):
 
 
 @app.route('/api/projects/<int:project_id>/groups', methods=['POST'])
-def create_group(project_id):
+def create_group(project_id: int) -> Response:
     """创建分组"""
-    data = request.json
+    data: Dict[str, Any] = request.json or {}
     group = ApiGroup(
         project_id=project_id,
-        name=data['name'],
+        name=data.get('name', ''),
         description=data.get('description', '')
     )
     db.session.add(group)
@@ -119,10 +121,10 @@ def create_group(project_id):
 
 
 @app.route('/api/groups/<int:group_id>', methods=['PUT'])
-def update_group(group_id):
+def update_group(group_id: int) -> Response:
     """更新分组"""
-    group = ApiGroup.query.get_or_404(group_id)
-    data = request.json
+    group: ApiGroup = ApiGroup.query.get_or_404(group_id)
+    data: Dict[str, Any] = request.json or {}
     group.name = data.get('name', group.name)
     group.description = data.get('description', group.description)
     db.session.commit()
@@ -130,28 +132,27 @@ def update_group(group_id):
 
 
 @app.route('/api/groups/<int:group_id>', methods=['DELETE'])
-def delete_group(group_id):
+def delete_group(group_id: int) -> Response:
     """删除分组"""
-    group = ApiGroup.query.get_or_404(group_id)
+    group: ApiGroup = ApiGroup.query.get_or_404(group_id)
     db.session.delete(group)
     db.session.commit()
     return jsonify({'success': True})
 
 
 @app.route('/api/groups/<int:group_id>/import-openapi', methods=['POST'])
-def import_openapi(group_id):
+def import_openapi(group_id: int) -> Response:
     """从OpenAPI/Swagger JSON导入API"""
-    group = ApiGroup.query.get_or_404(group_id)
-    data = request.json
-    openapi_spec = data.get('spec')
+    group: ApiGroup = ApiGroup.query.get_or_404(group_id)
+    data: Dict[str, Any] = request.json or {}
+    openapi_spec: Any = data.get('spec')
 
     if not openapi_spec:
         return jsonify({'success': False, 'error': '缺少OpenAPI规范内容'}), 400
 
     if isinstance(openapi_spec, str):
-        try:
-            openapi_spec = json.loads(openapi_spec)
-        except (json.JSONDecodeError, ValueError):
+        openapi_spec = from_json(openapi_spec)
+        if openapi_spec == {}:
             return jsonify({'success': False, 'error': 'JSON格式错误'}), 400
 
     paths = openapi_spec.get('paths', {})
@@ -163,10 +164,10 @@ def import_openapi(group_id):
         a.path for a in ApiConfig.query.filter_by(group_id=group_id).all()
     )
 
-    imported = 0
-    skipped = 0
+    imported: int = 0
+    skipped: int = 0
 
-    http_methods = {'get', 'post', 'put', 'delete', 'patch', 'head', 'options'}
+    http_methods: set = {'get', 'post', 'put', 'delete', 'patch', 'head', 'options'}
 
     for path, path_item in paths.items():
         if not isinstance(path_item, dict):
@@ -188,7 +189,7 @@ def import_openapi(group_id):
                 or f'{method.upper()} {path}'
             )
 
-            api = ApiConfig(
+            api: ApiConfig = ApiConfig(
                 group_id=group_id,
                 name=api_name,
                 path=path,
@@ -214,11 +215,11 @@ def import_openapi(group_id):
 # ==================== API配置管理 ====================
 
 @app.route('/api/groups/<int:group_id>/apis', methods=['GET'])
-def get_apis(group_id):
+def get_apis(group_id: int) -> Response:
     """获取分组下的所有API"""
-    sort_key = request.args.get('sort', 'default')
+    sort_key: str = request.args.get('sort', 'default')
     query = apply_sort(ApiConfig.query.filter_by(group_id=group_id), ApiConfig, sort_key)
-    apis = query.all()
+    apis: List[ApiConfig] = query.all()
     return jsonify([{
         'id': a.id,
         'name': a.name,
@@ -233,16 +234,16 @@ def get_apis(group_id):
 
 
 @app.route('/api/groups/<int:group_id>/apis', methods=['POST'])
-def create_api(group_id):
+def create_api(group_id: int) -> Response:
     """创建API配置"""
-    data = request.json
-    api = ApiConfig(
+    data: Dict[str, Any] = request.json or {}
+    api: ApiConfig = ApiConfig(
         group_id=group_id,
-        name=data['name'],
-        path=data['path'],
+        name=data.get('name', ''),
+        path=data.get('path', ''),
         method=data.get('method', 'POST'),
-        headers=json.dumps(data.get('headers', {})) if isinstance(data.get('headers'), dict) else data.get('headers', ''),
-        body=json.dumps(data.get('body', {})) if isinstance(data.get('body'), dict) else data.get('body', ''),
+        headers=to_json(data.get('headers', {})) if isinstance(data.get('headers'), dict) else data.get('headers', ''),
+        body=to_json(data.get('body', {})) if isinstance(data.get('body'), dict) else data.get('body', ''),
         description=data.get('description', '')
     )
     db.session.add(api)
@@ -251,35 +252,35 @@ def create_api(group_id):
 
 
 @app.route('/api/apis/<int:api_id>', methods=['PUT'])
-def update_api(api_id):
+def update_api(api_id: int) -> Response:
     """更新API配置"""
-    api = ApiConfig.query.get_or_404(api_id)
-    data = request.json
+    api: ApiConfig = ApiConfig.query.get_or_404(api_id)
+    data: Dict[str, Any] = request.json or {}
     api.name = data.get('name', api.name)
     api.path = data.get('path', api.path)
     api.method = data.get('method', api.method)
     if 'headers' in data:
-        api.headers = json.dumps(data['headers']) if isinstance(data['headers'], dict) else data['headers']
+        api.headers = to_json(data['headers']) if isinstance(data['headers'], dict) else data['headers']
     if 'body' in data:
-        api.body = json.dumps(data['body']) if isinstance(data['body'], dict) else data['body']
+        api.body = to_json(data['body']) if isinstance(data['body'], dict) else data['body']
     api.description = data.get('description', api.description)
     db.session.commit()
     return jsonify({'success': True})
 
 
 @app.route('/api/apis/<int:api_id>', methods=['DELETE'])
-def delete_api(api_id):
+def delete_api(api_id: int) -> Response:
     """删除API配置"""
-    api = ApiConfig.query.get_or_404(api_id)
+    api: ApiConfig = ApiConfig.query.get_or_404(api_id)
     db.session.delete(api)
     db.session.commit()
     return jsonify({'success': True})
 
 
 @app.route('/api/apis/<int:api_id>', methods=['GET'])
-def get_api(api_id):
+def get_api(api_id: int) -> Response:
     """获取单个API配置"""
-    api = ApiConfig.query.get_or_404(api_id)
+    api: ApiConfig = ApiConfig.query.get_or_404(api_id)
     return jsonify({
         'id': api.id,
         'group_id': api.group_id,
@@ -295,11 +296,11 @@ def get_api(api_id):
 # ==================== 环境管理 ====================
 
 @app.route('/api/projects/<int:project_id>/environments', methods=['GET'])
-def get_environments(project_id):
+def get_environments(project_id: int) -> Response:
     """获取项目下的所有环境"""
-    sort_key = request.args.get('sort', 'default')
+    sort_key: str = request.args.get('sort', 'default')
     query = apply_sort(Environment.query.filter_by(project_id=project_id), Environment, sort_key)
-    envs = query.all()
+    envs: List[Environment] = query.all()
     return jsonify([{
         'id': e.id,
         'name': e.name,
@@ -313,15 +314,15 @@ def get_environments(project_id):
 
 
 @app.route('/api/projects/<int:project_id>/environments', methods=['POST'])
-def create_environment(project_id):
+def create_environment(project_id: int) -> Response:
     """创建环境"""
-    data = request.json
-    env = Environment(
+    data: Dict[str, Any] = request.json or {}
+    env: Environment = Environment(
         project_id=project_id,
-        name=data['name'],
-        base_url=data['base_url'],
-        default_headers=json.dumps(data.get('default_headers', {})) if isinstance(data.get('default_headers'), dict) else data.get('default_headers', ''),
-        default_body=json.dumps(data.get('default_body', {})) if isinstance(data.get('default_body'), dict) else data.get('default_body', ''),
+        name=data.get('name', ''),
+        base_url=data.get('base_url', ''),
+        default_headers=to_json(data.get('default_headers', {})) if isinstance(data.get('default_headers'), dict) else data.get('default_headers', ''),
+        default_body=to_json(data.get('default_body', {})) if isinstance(data.get('default_body'), dict) else data.get('default_body', ''),
         description=data.get('description', '')
     )
     db.session.add(env)
@@ -330,25 +331,25 @@ def create_environment(project_id):
 
 
 @app.route('/api/environments/<int:env_id>', methods=['PUT'])
-def update_environment(env_id):
+def update_environment(env_id: int) -> Response:
     """更新环境"""
-    env = Environment.query.get_or_404(env_id)
-    data = request.json
+    env: Environment = Environment.query.get_or_404(env_id)
+    data: Dict[str, Any] = request.json or {}
     env.name = data.get('name', env.name)
     env.base_url = data.get('base_url', env.base_url)
     if 'default_headers' in data:
-        env.default_headers = json.dumps(data['default_headers']) if isinstance(data['default_headers'], dict) else data['default_headers']
+        env.default_headers = to_json(data['default_headers']) if isinstance(data['default_headers'], dict) else data['default_headers']
     if 'default_body' in data:
-        env.default_body = json.dumps(data['default_body']) if isinstance(data['default_body'], dict) else data['default_body']
+        env.default_body = to_json(data['default_body']) if isinstance(data['default_body'], dict) else data['default_body']
     env.description = data.get('description', env.description)
     db.session.commit()
     return jsonify({'success': True})
 
 
 @app.route('/api/environments/<int:env_id>', methods=['DELETE'])
-def delete_environment(env_id):
+def delete_environment(env_id: int) -> Response:
     """删除环境"""
-    env = Environment.query.get_or_404(env_id)
+    env: Environment = Environment.query.get_or_404(env_id)
     db.session.delete(env)
     db.session.commit()
     return jsonify({'success': True})
@@ -357,9 +358,9 @@ def delete_environment(env_id):
 # ==================== 变量管理 ====================
 
 @app.route('/api/projects/<int:project_id>/variables', methods=['GET'])
-def get_variables(project_id):
+def get_variables(project_id: int) -> Response:
     """获取项目下的所有变量"""
-    variables = Variable.query.filter_by(project_id=project_id).order_by(Variable.name).all()
+    variables: List[Variable] = Variable.query.filter_by(project_id=project_id).order_by(Variable.name).all()
     return jsonify([{
         'id': v.id,
         'name': v.name,
@@ -371,18 +372,18 @@ def get_variables(project_id):
 
 
 @app.route('/api/projects/<int:project_id>/variables', methods=['POST'])
-def create_variable(project_id):
+def create_variable(project_id: int) -> Response:
     """创建变量"""
-    data = request.json
-    name = data.get('name', '').strip()
+    data: Dict[str, Any] = request.json or {}
+    name: str = data.get('name', '').strip()
     if not name:
         return jsonify({'success': False, 'error': '变量名不能为空'}), 400
     
-    existing = Variable.query.filter_by(project_id=project_id, name=name).first()
+    existing: Optional[Variable] = Variable.query.filter_by(project_id=project_id, name=name).first()
     if existing:
         return jsonify({'success': False, 'error': '变量名已存在'}), 400
     
-    variable = Variable(
+    variable: Variable = Variable(
         project_id=project_id,
         name=name,
         value=data.get('value', ''),
@@ -394,14 +395,14 @@ def create_variable(project_id):
 
 
 @app.route('/api/variables/<int:var_id>', methods=['PUT'])
-def update_variable(var_id):
+def update_variable(var_id: int) -> Response:
     """更新变量"""
-    variable = Variable.query.get_or_404(var_id)
-    data = request.json
+    variable: Variable = Variable.query.get_or_404(var_id)
+    data: Dict[str, Any] = request.json or {}
     
-    new_name = data.get('name', '').strip()
+    new_name: str = data.get('name', '').strip()
     if new_name and new_name != variable.name:
-        existing = Variable.query.filter_by(project_id=variable.project_id, name=new_name).first()
+        existing: Optional[Variable] = Variable.query.filter_by(project_id=variable.project_id, name=new_name).first()
         if existing:
             return jsonify({'success': False, 'error': '变量名已存在'}), 400
         variable.name = new_name
@@ -416,9 +417,9 @@ def update_variable(var_id):
 
 
 @app.route('/api/variables/<int:var_id>', methods=['DELETE'])
-def delete_variable(var_id):
+def delete_variable(var_id: int) -> Response:
     """删除变量"""
-    variable = Variable.query.get_or_404(var_id)
+    variable: Variable = Variable.query.get_or_404(var_id)
     db.session.delete(variable)
     db.session.commit()
     return jsonify({'success': True})
@@ -427,12 +428,12 @@ def delete_variable(var_id):
 # ==================== 排序/拖拽重排 ====================
 
 @app.route('/api/projects/reorder', methods=['PUT'])
-def reorder_projects():
+def reorder_projects() -> Response:
     """批量更新项目排序"""
-    data = request.json
-    ids = data.get('ids', [])
+    data: Dict[str, Any] = request.json or {}
+    ids: List[int] = data.get('ids', [])
     for idx, item_id in enumerate(ids):
-        project = Project.query.get(item_id)
+        project: Optional[Project] = Project.query.get(item_id)
         if project:
             project.sort_order = idx
     db.session.commit()
@@ -440,12 +441,12 @@ def reorder_projects():
 
 
 @app.route('/api/groups/reorder', methods=['PUT'])
-def reorder_groups():
+def reorder_groups() -> Response:
     """批量更新分组排序"""
-    data = request.json
-    ids = data.get('ids', [])
+    data: Dict[str, Any] = request.json or {}
+    ids: List[int] = data.get('ids', [])
     for idx, item_id in enumerate(ids):
-        group = ApiGroup.query.get(item_id)
+        group: Optional[ApiGroup] = ApiGroup.query.get(item_id)
         if group:
             group.sort_order = idx
     db.session.commit()
@@ -453,12 +454,12 @@ def reorder_groups():
 
 
 @app.route('/api/apis/reorder', methods=['PUT'])
-def reorder_apis():
+def reorder_apis() -> Response:
     """批量更新API排序"""
-    data = request.json
-    ids = data.get('ids', [])
+    data: Dict[str, Any] = request.json or {}
+    ids: List[int] = data.get('ids', [])
     for idx, item_id in enumerate(ids):
-        api = ApiConfig.query.get(item_id)
+        api: Optional[ApiConfig] = ApiConfig.query.get(item_id)
         if api:
             api.sort_order = idx
     db.session.commit()
@@ -466,12 +467,12 @@ def reorder_apis():
 
 
 @app.route('/api/environments/reorder', methods=['PUT'])
-def reorder_environments():
+def reorder_environments() -> Response:
     """批量更新环境排序"""
-    data = request.json
-    ids = data.get('ids', [])
+    data: Dict[str, Any] = request.json or {}
+    ids: List[int] = data.get('ids', [])
     for idx, item_id in enumerate(ids):
-        env = Environment.query.get(item_id)
+        env: Optional[Environment] = Environment.query.get(item_id)
         if env:
             env.sort_order = idx
     db.session.commit()
@@ -481,18 +482,18 @@ def reorder_environments():
 # ==================== API对比 ====================
 
 @app.route('/api/diff', methods=['POST'])
-def diff_apis():
+def diff_apis() -> Response:
     """执行API对比"""
-    data = request.json
+    data: Dict[str, Any] = request.json or {}
 
-    api_id = data.get('api_id')
-    method = data.get('method', 'POST')
-    headers1 = data.get('headers1', {})
-    headers2 = data.get('headers2', {})
-    body1 = data.get('body1', {})
-    body2 = data.get('body2', {})
-    url1 = data.get('url1', '')
-    url2 = data.get('url2', '')
+    api_id: Optional[int] = data.get('api_id')
+    method: str = data.get('method', 'POST')
+    headers1: Dict[str, Any] = data.get('headers1', {})
+    headers2: Dict[str, Any] = data.get('headers2', {})
+    body1: Dict[str, Any] = data.get('body1', {})
+    body2: Dict[str, Any] = data.get('body2', {})
+    url1: str = data.get('url1', '')
+    url2: str = data.get('url2', '')
 
     # 如果有API配置，补充默认值
     if api_id:
@@ -502,27 +503,27 @@ def diff_apis():
         if not url2:
             url2 = api.path
         if not headers1:
-            headers1 = json.loads(api.headers or '{}')
+            headers1 = from_json(api.headers, {})
         if not headers2:
-            headers2 = json.loads(api.headers or '{}')
+            headers2 = from_json(api.headers, {})
         if not body1:
-            body1 = json.loads(api.body or '{}')
+            body1 = from_json(api.body, {})
         if not body2:
-            body2 = json.loads(api.body or '{}')
+            body2 = from_json(api.body, {})
         method = method or api.method
 
     # 执行对比
-    result = diff_service.diff(url1, url2, method, headers1, headers2, body1, body2)
+    result: Dict[str, Any] = diff_service.diff(url1, url2, method, headers1, headers2, body1, body2)
 
     # 保存对比记录（响应数据截取前2000字符存库）
-    if api_id and result['success']:
-        record = DiffRecord(
+    if api_id and result.get('success'):
+        record: DiffRecord = DiffRecord(
             api_id=api_id,
             env1_url=url1,
             env2_url=url2,
-            env1_response=_truncate(json.dumps(result.get('response1'))),
-            env2_response=_truncate(json.dumps(result.get('response2'))),
-            diff_result=_truncate(json.dumps(result.get('diff')))
+            env1_response=safe_json_dumps(result.get('response1'), max_length=2000),
+            env2_response=safe_json_dumps(result.get('response2'), max_length=2000),
+            diff_result=safe_json_dumps(result.get('diff'), max_length=2000)
         )
         db.session.add(record)
         db.session.commit()
@@ -531,9 +532,9 @@ def diff_apis():
 
 
 @app.route('/api/diff/records/<int:api_id>', methods=['GET'])
-def get_diff_records(api_id):
+def get_diff_records(api_id: int) -> Response:
     """获取API的对比历史记录"""
-    records = DiffRecord.query.filter_by(api_id=api_id).order_by(DiffRecord.created_at.desc()).limit(20).all()
+    records: List[DiffRecord] = DiffRecord.query.filter_by(api_id=api_id).order_by(DiffRecord.created_at.desc()).limit(20).all()
     return jsonify([{
         'id': r.id,
         'env1_url': r.env1_url,
@@ -545,25 +546,26 @@ def get_diff_records(api_id):
 
 # ==================== 测试用例管理 ====================
 
-def _truncate(s, max_len=2000):
-    """截取字符串到指定长度"""
+def _truncate(s: str, max_len: int = 2000) -> str:
+    """截取字符串到指定长度（已废弃，请使用safe_json_dumps）"""
     s = s or ''
     return s[:max_len] if len(s) > max_len else s
 
 
 @app.route('/api/apis/<int:api_id>/test-cases', methods=['POST'])
-def save_test_case(api_id):
+def save_test_case(api_id: int) -> Response:
     """保存/更新测试用例（根据id判断是新建还是更新）"""
     try:
-        data = request.json
+        data: Dict[str, Any] = request.json or {}
     except Exception as e:
         return jsonify({'success': False, 'error': '请求体解析失败: ' + str(e)}), 400
 
-    tc_id = data.get('id')  # 有id则更新，无则新建
+    tc_id: Optional[int] = data.get('id')  # 有id则更新，无则新建
 
-    def _dump(val):
-        return json.dumps(val, ensure_ascii=False) if isinstance(val, dict) else (val or '')
+    def _dump(val: Any) -> str:
+        return to_json(val, ensure_ascii=False) if isinstance(val, dict) else (val or '')
 
+    tc: TestCase
     if tc_id:
         # 更新已有用例
         tc = TestCase.query.get_or_404(tc_id)
@@ -580,7 +582,7 @@ def save_test_case(api_id):
         tc.env2_id = data.get('env2_id')
         # 如果有对比结果也更新
         if data.get('diff_result') is not None:
-            tc.diff_result = _truncate(json.dumps(data['diff_result'], ensure_ascii=False))
+            tc.diff_result = safe_json_dumps(data['diff_result'], max_length=2000)
     else:
         # 新建
         tc = TestCase(
@@ -588,14 +590,14 @@ def save_test_case(api_id):
             name=data.get('name', '未命名用例'),
             env1_id=data.get('env1_id'),
             env2_id=data.get('env2_id'),
-            url1=data['url1'],
-            url2=data['url2'],
+            url1=data.get('url1', ''),
+            url2=data.get('url2', ''),
             method=data.get('method', 'POST'),
             headers1=_dump(data.get('headers1')),
             headers2=_dump(data.get('headers2')),
             body1=_dump(data.get('body1')),
             body2=_dump(data.get('body2')),
-            diff_result=_truncate(json.dumps(data.get('diff_result'), ensure_ascii=False)) if data.get('diff_result') else None
+            diff_result=safe_json_dumps(data.get('diff_result'), max_length=2000) if data.get('diff_result') else None
         )
         db.session.add(tc)
 
@@ -604,9 +606,9 @@ def save_test_case(api_id):
 
 
 @app.route('/api/apis/<int:api_id>/test-cases', methods=['GET'])
-def get_test_cases(api_id):
+def get_test_cases(api_id: int) -> Response:
     """获取某API下的所有测试用例"""
-    cases = TestCase.query.filter_by(api_id=api_id).order_by(TestCase.updated_at.desc()).all()
+    cases: List[TestCase] = TestCase.query.filter_by(api_id=api_id).order_by(TestCase.updated_at.desc()).all()
     return jsonify([{
         'id': c.id,
         'name': c.name,
@@ -624,9 +626,9 @@ def get_test_cases(api_id):
 
 
 @app.route('/api/test-cases/<int:tc_id>', methods=['DELETE'])
-def delete_test_case(tc_id):
+def delete_test_case(tc_id: int) -> Response:
     """删除测试用例"""
-    tc = TestCase.query.get_or_404(tc_id)
+    tc: TestCase = TestCase.query.get_or_404(tc_id)
     db.session.delete(tc)
     db.session.commit()
     return jsonify({'success': True})
@@ -635,12 +637,12 @@ def delete_test_case(tc_id):
 # ==================== 前端页面 ====================
 
 @app.route('/')
-def index():
+def index() -> str:
     return render_template('index.html')
 
 
 # 初始化数据库
-def init_db():
+def init_db() -> None:
     with app.app_context():
         db.create_all()
         # 迁移：为已有表添加 sort_order 列（如果不存在）
@@ -650,11 +652,11 @@ def init_db():
         _ensure_column('environments', 'sort_order', 'INT DEFAULT 0 COMMENT \'排序序号\'')
 
 
-def _ensure_column(table, col_name, col_def):
+def _ensure_column(table: str, col_name: str, col_def: str) -> None:
     """检查列是否存在，不存在则添加"""
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
-    existing_cols = [c['name'] for c in inspector.get_columns(table)]
+    existing_cols: List[str] = [c['name'] for c in inspector.get_columns(table)]
     if col_name not in existing_cols:
         db.session.execute(text(f'ALTER TABLE {table} ADD COLUMN {col_name} {col_def}'))
         db.session.commit()
@@ -663,12 +665,12 @@ def _ensure_column(table, col_name, col_def):
 
 # 全局错误处理器：返回JSON格式的错误信息，便于前端调试
 @app.errorhandler(500)
-def handle_500(e):
+def handle_500(e: Exception) -> Response:
     import traceback
     return jsonify({'success': False, 'error': '服务器内部错误: ' + str(e), 'trace': traceback.format_exc()}), 500
 
 @app.errorhandler(404)
-def handle_404(e):
+def handle_404(e: Exception) -> Response:
     return jsonify({'success': False, 'error': '接口不存在: ' + request.path}), 404
 
 
