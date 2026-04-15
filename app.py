@@ -3,7 +3,7 @@ Flask应用配置和路由
 """
 import json
 from flask import Flask, request, jsonify, render_template
-from models import db, Project, ApiGroup, ApiConfig, Environment, DiffRecord, TestCase
+from models import db, Project, ApiGroup, ApiConfig, Environment, DiffRecord, TestCase, Variable
 from diff_service import DiffService
 
 app = Flask(__name__)
@@ -350,6 +350,76 @@ def delete_environment(env_id):
     """删除环境"""
     env = Environment.query.get_or_404(env_id)
     db.session.delete(env)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# ==================== 变量管理 ====================
+
+@app.route('/api/projects/<int:project_id>/variables', methods=['GET'])
+def get_variables(project_id):
+    """获取项目下的所有变量"""
+    variables = Variable.query.filter_by(project_id=project_id).order_by(Variable.name).all()
+    return jsonify([{
+        'id': v.id,
+        'name': v.name,
+        'value': v.value,
+        'description': v.description or '',
+        'created_at': v.created_at.isoformat() if v.created_at else None,
+        'updated_at': v.updated_at.isoformat() if v.updated_at else None
+    } for v in variables])
+
+
+@app.route('/api/projects/<int:project_id>/variables', methods=['POST'])
+def create_variable(project_id):
+    """创建变量"""
+    data = request.json
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': '变量名不能为空'}), 400
+    
+    existing = Variable.query.filter_by(project_id=project_id, name=name).first()
+    if existing:
+        return jsonify({'success': False, 'error': '变量名已存在'}), 400
+    
+    variable = Variable(
+        project_id=project_id,
+        name=name,
+        value=data.get('value', ''),
+        description=data.get('description', '')
+    )
+    db.session.add(variable)
+    db.session.commit()
+    return jsonify({'success': True, 'id': variable.id, 'name': variable.name})
+
+
+@app.route('/api/variables/<int:var_id>', methods=['PUT'])
+def update_variable(var_id):
+    """更新变量"""
+    variable = Variable.query.get_or_404(var_id)
+    data = request.json
+    
+    new_name = data.get('name', '').strip()
+    if new_name and new_name != variable.name:
+        existing = Variable.query.filter_by(project_id=variable.project_id, name=new_name).first()
+        if existing:
+            return jsonify({'success': False, 'error': '变量名已存在'}), 400
+        variable.name = new_name
+    
+    if 'value' in data:
+        variable.value = data['value']
+    if 'description' in data:
+        variable.description = data['description']
+    
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/variables/<int:var_id>', methods=['DELETE'])
+def delete_variable(var_id):
+    """删除变量"""
+    variable = Variable.query.get_or_404(var_id)
+    db.session.delete(variable)
     db.session.commit()
     return jsonify({'success': True})
 

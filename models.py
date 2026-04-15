@@ -21,6 +21,7 @@ class Project(db.Model):
     # 关联
     groups = db.relationship('ApiGroup', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     environments = db.relationship('Environment', backref='project', lazy='dynamic', cascade='all, delete-orphan')
+    variables = db.relationship('Variable', backref='project', lazy='dynamic', cascade='all, delete-orphan')
 
 
 class ApiGroup(db.Model):
@@ -105,3 +106,20 @@ class TestCase(db.Model):
     diff_result = db.Column(db.Text, comment='最近一次对比结果(JSON,截取前2000字符)')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
+
+
+class Variable(db.Model):
+    """全局变量表"""
+    __tablename__ = 'variables'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False, comment='项目ID')
+    name = db.Column(db.String(100), nullable=False, comment='变量名')
+    value = db.Column(db.Text, comment='变量值')
+    description = db.Column(db.String(500), comment='描述')
+    created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
+
+    __table_args__ = (
+        db.UniqueConstraint('project_id', 'name', name='uq_project_variable'),
+    )

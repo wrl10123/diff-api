@@ -122,3 +122,21 @@ CREATE TABLE `test_cases` (
     KEY `idx_api_id` (`api_id`),
     CONSTRAINT `fk_test_cases_api` FOREIGN KEY (`api_id`) REFERENCES `api_configs` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试用例表';
+
+-- -----------------------------------------------------------
+-- 全局变量表 (variables)
+-- -----------------------------------------------------------
+DROP TABLE IF EXISTS `variables`;
+CREATE TABLE `variables` (
+    `id`          INT           NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `project_id`  INT           NOT NULL                COMMENT '项目ID',
+    `name`        VARCHAR(100)  NOT NULL                COMMENT '变量名',
+    `value`       TEXT                                  COMMENT '变量值',
+    `description` VARCHAR(500)  DEFAULT ''              COMMENT '描述',
+    `created_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_project_id` (`project_id`),
+    CONSTRAINT `fk_variables_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `uq_project_variable` (`project_id`, `name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='全局变量表';

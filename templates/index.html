@@ -29,6 +29,7 @@
                                     <div onclick="onSortChange('projects', 'time_asc')">最早优先</div>
                                 </div>
                             </div>
+                            <button class="btn-add" id="varManageBtn" onclick="openVariableModal()" style="display:none" title="变量管理">{ }</button>
                             <button class="btn-add" onclick="openProjectModal()" title="新建项目">+</button>
                         </div>
                     </div>
@@ -426,6 +427,49 @@
             <div class="flex">
                 <button class="btn btn-primary" onclick="importOpenAPI()">开始导入</button>
                 <button class="btn btn-default" onclick="closeModal('importApiModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 变量管理弹窗 ========== -->
+    <div id="variableModal" class="modal-overlay">
+        <div class="modal-box var-modal">
+            <div class="modal-header">
+                <h3>变量管理</h3>
+                <button class="modal-close" onclick="closeModal('variableModal')" title="关闭">×</button>
+            </div>
+            <p class="var-tip">在 Headers 或 Body 中使用 <code>\{\{变量名\}\}</code> 进行占位，请求时会自动替换为变量值</p>
+            <div class="var-container">
+                <div class="var-list-panel">
+                    <div class="var-list-header">
+                        <span>变量列表</span>
+                        <button class="btn-add" onclick="newVariable()" title="新增变量">+</button>
+                    </div>
+                    <div id="varList" class="var-list"></div>
+                </div>
+                <div class="var-edit-panel">
+                    <div class="var-edit-header">编辑变量</div>
+                    <div id="varEditForm" class="var-edit-form">
+                        <div class="form-group">
+                            <label>变量名</label>
+                            <input type="text" id="varName" placeholder="例如: token, userId">
+                        </div>
+                        <div class="form-group">
+                            <label>变量值</label>
+                            <textarea id="varValue" placeholder="变量值，支持多行"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>描述</label>
+                            <input type="text" id="varDesc" placeholder="变量说明（可选）">
+                        </div>
+                        <div class="flex" style="margin-top:10px;">
+                            <button class="btn btn-primary" onclick="saveVariable()">保存</button>
+                            <button class="btn btn-danger" id="deleteVarBtn" onclick="deleteVariable()" style="display:none;">删除</button>
+                            <button class="btn btn-default" onclick="cancelVariableEdit()">取消</button>
+                        </div>
+                    </div>
+                    <div id="varEditEmpty" class="var-edit-empty">请选择或新增变量</div>
+                </div>
             </div>
         </div>
     </div>

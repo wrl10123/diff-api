@@ -439,9 +439,10 @@ async function selectProject(projectId) {
     const el = document.getElementById('project-' + projectId);
     if (el) el.classList.add('active');
     document.getElementById('addGroupBtn').style.display = 'inline-block';
+    document.getElementById('varManageBtn').style.display = 'inline-block';
     document.getElementById('addApiBtn').style.display = 'none';
     document.getElementById('apiList').innerHTML = '<div class="empty-tip">请先选择分组</div>';
-    await Promise.all([loadEnvironments(projectId), loadGroups(projectId), loadApisForDiff()]);
+    await Promise.all([loadEnvironments(projectId), loadGroups(projectId), loadApisForDiff(), loadVariables(projectId)]);
 }
 
 async function deleteProject(id) {
@@ -453,6 +454,7 @@ async function deleteProject(id) {
     document.getElementById('apiList').innerHTML = '<div class="empty-tip">请先选择分组</div>';
     document.getElementById('envList').innerHTML = '<div class="empty-tip">请先选择项目</div>';
     document.getElementById('addGroupBtn').style.display = 'none';
+    document.getElementById('varManageBtn').style.display = 'none';
     document.getElementById('addApiBtn').style.display = 'none';
     loadProjects();
 }
@@ -794,14 +796,22 @@ function selectApiForDiff(apiId) {
 
 // ==================== 对比执行 ====================
 async function executeDiff() {
-    const url1 = document.getElementById('url1').value.trim();
-    const url2 = document.getElementById('url2').value.trim();
+    let url1 = document.getElementById('url1').value.trim();
+    let url2 = document.getElementById('url2').value.trim();
     if (!url1 || !url2) return alert('请输入环境1和环境2的完整URL');
     const method = document.getElementById('method').value;
-    const headers1 = getFieldJsonValue('headers1');
-    const headers2 = getFieldJsonValue('headers2');
-    const body1 = getFieldJsonValue('body1');
-    const body2 = getFieldJsonValue('body2');
+    let headers1 = getFieldJsonValue('headers1');
+    let headers2 = getFieldJsonValue('headers2');
+    let body1 = getFieldJsonValue('body1');
+    let body2 = getFieldJsonValue('body2');
+
+    // 替换变量占位符
+    url1 = replaceVariables(url1);
+    url2 = replaceVariables(url2);
+    headers1 = replaceVariablesDeep(headers1);
+    headers2 = replaceVariablesDeep(headers2);
+    body1 = replaceVariablesDeep(body1);
+    body2 = replaceVariablesDeep(body2);
 
     document.getElementById('diffResult').innerHTML = '<div class="loading">对比中...</div>';
     const res = await fetch('/api/diff', {
@@ -819,6 +829,21 @@ async function executeDiff() {
     } else {
         document.getElementById('diffResult').innerHTML = '<div class="result result-error">&#10060; ' + esc(result.error) + '</div>';
     }
+}
+
+function replaceVariablesDeep(obj) {
+    if (typeof obj === 'string') {
+        return replaceVariables(obj);
+    } else if (Array.isArray(obj)) {
+        return obj.map(item => replaceVariablesDeep(item));
+    } else if (obj !== null && typeof obj === 'object') {
+        const result = {};
+        for (const key in obj) {
+            result[replaceVariables(key)] = replaceVariablesDeep(obj[key]);
+        }
+        return result;
+    }
+    return obj;
 }
 
 // ==================== 测试用例管理 ====================
@@ -1537,3 +1562,158 @@ function escHtmlEntities(s) {
 // ==================== 初始化 ====================
 loadProjects();
 initResizer();
+
+// ==================== 变量管理 ====================
+let variableCache = [];  // 缓存当前项目的变量列表
+let currentVariableId = null;  // 当前编辑的变量ID
+
+async function loadVariables(projectId) {
+    if (!projectId) return;
+    try {
+        const res = await fetch('/api/projects/' + projectId + '/variables');
+        variableCache = await res.json();
+    } catch(e) {
+        console.warn('加载变量失败:', e);
+        variableCache = [];
+    }
+}
+
+function openVariableModal() {
+    if (!currentProjectId) return;
+    currentVariableId = null;
+    renderVariableList();
+    if (variableCache.length > 0) {
+        selectVariable(variableCache[0].id);
+    } else {
+        showVariableEditForm(false);
+    }
+    openModal('variableModal');
+}
+
+function renderVariableList() {
+    const listEl = document.getElementById('varList');
+    if (variableCache.length === 0) {
+        listEl.innerHTML = '<div class="var-list-empty">暂无变量</div>';
+        return;
+    }
+    listEl.innerHTML = variableCache.map(v => `
+        <div class="var-item ${currentVariableId === v.id ? 'active' : ''}" onclick="selectVariable(${v.id})">
+            <span class="var-item-name">${esc(v.name)}</span>
+            <span class="var-item-delete" onclick="event.stopPropagation();confirmDeleteVariable(${v.id})" title="删除">×</span>
+        </div>
+    `).join('');
+}
+
+function selectVariable(varId) {
+    currentVariableId = varId;
+    const v = variableCache.find(x => x.id === varId);
+    if (!v) return;
+    
+    document.getElementById('varName').value = v.name;
+    document.getElementById('varValue').value = v.value || '';
+    document.getElementById('varDesc').value = v.description || '';
+    document.getElementById('deleteVarBtn').style.display = 'inline-block';
+    showVariableEditForm(true);
+    renderVariableList();
+}
+
+function newVariable() {
+    currentVariableId = null;
+    document.getElementById('varName').value = '';
+    document.getElementById('varValue').value = '';
+    document.getElementById('varDesc').value = '';
+    document.getElementById('deleteVarBtn').style.display = 'none';
+    showVariableEditForm(true);
+    renderVariableList();
+}
+
+function showVariableEditForm(show) {
+    document.getElementById('varEditForm').style.display = show ? 'block' : 'none';
+    document.getElementById('varEditEmpty').style.display = show ? 'none' : 'block';
+}
+
+async function saveVariable() {
+    const name = document.getElementById('varName').value.trim();
+    if (!name) return alert('请输入变量名');
+    
+    const payload = {
+        name,
+        value: document.getElementById('varValue').value,
+        description: document.getElementById('varDesc').value.trim()
+    };
+    
+    try {
+        let res;
+        if (currentVariableId) {
+            res = await fetch('/api/variables/' + currentVariableId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            res = await fetch('/api/projects/' + currentProjectId + '/variables', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+        const result = await res.json();
+        if (result.success) {
+            await loadVariables(currentProjectId);
+            if (result.id && !currentVariableId) {
+                currentVariableId = result.id;
+                document.getElementById('deleteVarBtn').style.display = 'inline-block';
+            }
+            renderVariableList();
+            alert('保存成功');
+        } else {
+            alert('保存失败: ' + (result.error || '未知错误'));
+        }
+    } catch(e) {
+        alert('请求失败: ' + e.message);
+    }
+}
+
+function cancelVariableEdit() {
+    currentVariableId = null;
+    showVariableEditForm(false);
+    renderVariableList();
+}
+
+function confirmDeleteVariable(varId) {
+    if (!confirm('确定删除该变量?')) return;
+    deleteVariableById(varId);
+}
+
+async function deleteVariable() {
+    if (!currentVariableId) return;
+    if (!confirm('确定删除该变量?')) return;
+    await deleteVariableById(currentVariableId);
+}
+
+async function deleteVariableById(varId) {
+    try {
+        await fetch('/api/variables/' + varId, { method: 'DELETE' });
+        await loadVariables(currentProjectId);
+        if (currentVariableId === varId) {
+            currentVariableId = null;
+            showVariableEditForm(false);
+        }
+        renderVariableList();
+    } catch(e) {
+        alert('删除失败: ' + e.message);
+    }
+}
+
+function replaceVariables(str) {
+    if (!str || typeof str !== 'string') return str;
+    variableCache.forEach(v => {
+        const pattern = new RegExp('\\{\\{' + escapeRegExp(v.name) + '\\}\\}', 'g');
+        str = str.replace(pattern, v.value || '');
+    });
+    return str;
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
