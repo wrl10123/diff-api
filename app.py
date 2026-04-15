@@ -554,16 +554,21 @@ def _truncate(s, max_len=2000):
 @app.route('/api/apis/<int:api_id>/test-cases', methods=['POST'])
 def save_test_case(api_id):
     """保存/更新测试用例（根据id判断是新建还是更新）"""
-    data = request.json
+    try:
+        data = request.json
+    except Exception as e:
+        return jsonify({'success': False, 'error': '请求体解析失败: ' + str(e)}), 400
+
     tc_id = data.get('id')  # 有id则更新，无则新建
 
     def _dump(val):
-        return json.dumps(val) if isinstance(val, dict) else (val or '')
+        return json.dumps(val, ensure_ascii=False) if isinstance(val, dict) else (val or '')
 
     if tc_id:
         # 更新已有用例
         tc = TestCase.query.get_or_404(tc_id)
-        tc.name = data.get('name', tc.name)
+        if data.get('name') is not None:
+            tc.name = data['name']
         tc.url1 = data.get('url1', tc.url1)
         tc.url2 = data.get('url2', tc.url2)
         tc.method = data.get('method', tc.method)
@@ -574,8 +579,8 @@ def save_test_case(api_id):
         tc.env1_id = data.get('env1_id')
         tc.env2_id = data.get('env2_id')
         # 如果有对比结果也更新
-        if data.get('diff_result'):
-            tc.diff_result = _truncate(json.dumps(data['diff_result']))
+        if data.get('diff_result') is not None:
+            tc.diff_result = _truncate(json.dumps(data['diff_result'], ensure_ascii=False))
     else:
         # 新建
         tc = TestCase(
@@ -590,7 +595,7 @@ def save_test_case(api_id):
             headers2=_dump(data.get('headers2')),
             body1=_dump(data.get('body1')),
             body2=_dump(data.get('body2')),
-            diff_result=_truncate(json.dumps(data.get('diff_result'))) if data.get('diff_result') else None
+            diff_result=_truncate(json.dumps(data.get('diff_result'), ensure_ascii=False)) if data.get('diff_result') else None
         )
         db.session.add(tc)
 
@@ -654,6 +659,17 @@ def _ensure_column(table, col_name, col_def):
         db.session.execute(text(f'ALTER TABLE {table} ADD COLUMN {col_name} {col_def}'))
         db.session.commit()
         print(f'[DB] 已为表 {table} 添加列 {col_name}')
+
+
+# 全局错误处理器：返回JSON格式的错误信息，便于前端调试
+@app.errorhandler(500)
+def handle_500(e):
+    import traceback
+    return jsonify({'success': False, 'error': '服务器内部错误: ' + str(e), 'trace': traceback.format_exc()}), 500
+
+@app.errorhandler(404)
+def handle_404(e):
+    return jsonify({'success': False, 'error': '接口不存在: ' + request.path}), 404
 
 
 if __name__ == '__main__':
