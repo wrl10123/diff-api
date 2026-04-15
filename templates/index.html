@@ -105,9 +105,8 @@
                 <div class="panel">
                     <div class="panel-title">API对比</div>
                     <div class="form-group">
-                        <label>选择API</label>
-                        <select id="diffApiSelect" onchange="onDiffApiChange()">
-                            <option value="">-- 请选择API --</option>
+                        <select id="diffApiSelect" class="api-select" onchange="onDiffApiChange()">
+                            <option value="">请选择...</option>
                         </select>
                     </div>
 
@@ -120,14 +119,13 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>环境1 完整URL</label>
-                                <input type="text" id="url1" placeholder="http://localhost:8080/api/user/info">
+                                <input type="text" id="url1" class="url-input" placeholder="环境1 URL: http://localhost:8080/api/user/info">
                             </div>
                             <!-- 请求头 -->
                             <div class="form-group">
                                 <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                    <label>请求头</label>
-                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode(event, 'headers1')">切换格式</button>
+                                    <label>Headers</label>
+                                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('headers1')" title="切换风格">⇄</button>
                                 </div>
                                 <div id="headers1-kv-container" class="kv-container">
                                     <div class="kv-list" id="headers1-kv-list">
@@ -144,8 +142,8 @@
                             <!-- 请求体 -->
                             <div class="form-group">
                                 <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                    <label>请求体</label>
-                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('body1')">切换为Key-Value</button>
+                                    <label>Body</label>
+                                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('body1')" title="切换风格">⇄</button>
                                 </div>
                                 <div id="body1-kv-container" class="kv-container hidden">
                                     <div class="kv-list" id="body1-kv-list">
@@ -168,14 +166,13 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>环境2 完整URL</label>
-                                <input type="text" id="url2" placeholder="http://localhost:8090/api/user/info">
+                                <input type="text" id="url2" class="url-input" placeholder="环境2 URL: http://localhost:8090/api/user/info">
                             </div>
                             <!-- Header -->
                             <div class="form-group">
                                 <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                    <label>请求头</label>
-                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('headers2', event)">切换格式</button>
+                                    <label>Headers</label>
+                                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('headers2')" title="切换风格">⇄</button>
                                 </div>
                                 <div id="headers2-kv-container" class="kv-container">
                                     <div class="kv-list" id="headers2-kv-list">
@@ -192,8 +189,8 @@
                             <!-- Body -->
                             <div class="form-group">
                                 <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                    <label>请求体</label>
-                                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('body2', event)">切换为Key-Value</button>
+                                    <label>Body</label>
+                                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('body2')" title="切换风格">⇄</button>
                                 </div>
                                 <div id="body2-kv-container" class="kv-container hidden">
                                     <div class="kv-list" id="body2-kv-list">
@@ -271,7 +268,7 @@
             <div class="form-group">
                 <div class="flex" style="justify-content:space-between;margin-bottom:5px;">
                     <label>默认请求头</label>
-                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('envDefaultHeaders')">切换为JSON</button>
+                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('envDefaultHeaders')" title="切换风格">⇄</button>
                 </div>
                 <div id="envDefaultHeaders-kv-container" class="kv-container">
                     <div class="kv-list" id="envDefaultHeaders-kv-list">
@@ -289,7 +286,7 @@
             <div class="form-group">
                 <div class="flex" style="justify-content:space-between;margin-bottom:5px;">
                     <label>默认请求体</label>
-                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('envDefaultBody')">切换为Key-Value</button>
+                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('envDefaultBody')" title="切换风格">⇄</button>
                 </div>
                 <div id="envDefaultBody-kv-container" class="kv-container hidden">
                     <div class="kv-list" id="envDefaultBody-kv-list">
@@ -359,8 +356,8 @@
             <!-- API Headers -->
             <div class="form-group">
                 <label class="flex">
-                    <span class="flex-1">请求头</span>
-                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('apiHeaders', event)">切换格式</button>
+                    <span class="flex-1">Headers</span>
+                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('apiHeaders')" title="切换风格">⇄</button>
                 </label>
                 <div id="apiHeaders-kv-container" class="kv-container">
                     <div class="kv-list" id="apiHeaders-kv-list">
@@ -377,8 +374,8 @@
             <!-- API Body -->
             <div class="form-group">
                 <label class="flex">
-                    <span class="flex-1">请求体</span>
-                    <button type="button" class="btn btn-sm btn-default" onclick="toggleInputMode('apiBody', event)">切换为Key-Value</button>
+                    <span class="flex-1">Body</span>
+                    <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('apiBody')" title="切换风格">⇄</button>
                 </label>
                 <div id="apiBody-kv-container" class="kv-container hidden">
                     <div class="kv-list" id="apiBody-kv-list">

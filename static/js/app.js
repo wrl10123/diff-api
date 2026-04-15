@@ -57,7 +57,6 @@ function toggleInputMode(fieldId, btn) {
         // 当前是JSON模式，切换到KV模式
         kvContainer.classList.remove('hidden');
         jsonTextarea.classList.add('hidden');
-        toggleBtn.textContent = '切换为JSON';
         // 将JSON解析为KV
         try {
             const jsonObj = JSON.parse(jsonTextarea.value || '{}');
@@ -76,7 +75,6 @@ function toggleInputMode(fieldId, btn) {
         // 当前是KV模式，切换到JSON模式
         kvContainer.classList.add('hidden');
         jsonTextarea.classList.remove('hidden');
-        toggleBtn.textContent = '切换为Key-Value';
         // 将KV转换为JSON
         const kvRows = kvContainer.querySelectorAll('.kv-row');
         const jsonObj = {};
@@ -749,7 +747,7 @@ async function loadApisForDiff() {
         allApis = allApis.concat(apis.map(a => ({...a, groupName: g.name})));
     }
     const select = document.getElementById('diffApiSelect');
-    select.innerHTML = '<option value="">-- 请选择API --</option>' +
+    select.innerHTML = '<option value="">请选择...</option>' +
         allApis.map(a => `<option value="${a.id}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers||'')}" data-body="${esc(a.body||'')}">[${esc(a.groupName)}] ${esc(a.name)} - ${esc(a.path)}</option>`).join('');
 }
 

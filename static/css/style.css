@@ -12,6 +12,35 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
 .form-group textarea { min-height: 80px; font-family: monospace; }
 
+/* API选择下拉框 */
+.api-select {
+    color: #888;
+    background: #fff;
+}
+.api-select option { color: #888; }
+.api-select option:checked { color: #333; }
+
+/* URL输入框 */
+.url-input { color: #666; }
+.url-input:focus { color: #333; }
+
+/* 切换风格按钮 */
+.btn-toggle-mode {
+    background: rgba(0,123,255,0.08);
+    border: none;
+    color: #007bff;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s, background 0.15s;
+}
+.btn-toggle-mode:hover {
+    color: #0056b3;
+    background: rgba(0,123,255,0.18);
+}
+
 .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
 .btn-primary { background: #007bff; color: #fff; }
 .btn-primary:hover { background: #0056b3; }
@@ -76,14 +105,16 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
 .empty-tip { padding: 10px; color: #999; font-size: 14px; }
 
 /* Key-Value 输入样式 */
-.kv-container { border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #fafafa; }
-.kv-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-.kv-row:last-child { margin-bottom: 0; }
-.kv-row input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+.kv-container { border: 1px solid #eee; border-radius: 4px; padding: 10px; background: transparent; }
+.kv-row { display: flex; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; align-items: center; border-bottom: 1px solid #eee; }
+.kv-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.kv-row input { flex: 1; padding: 6px 10px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; background: transparent; transition: border-color 0.15s; }
+.kv-row input:focus { border-color: #007bff; outline: none; }
 .kv-row .btn-remove { padding: 4px 8px; font-size: 12px; background: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
 .kv-row .btn-remove:hover { background: #c82333; }
 .kv-actions { margin-top: 8px; display: flex; gap: 8px; }
-.kv-actions .btn { padding: 4px 12px; font-size: 12px; }
+.kv-actions .btn.btn-primary { background: rgba(0,123,255,0.3) !important; color: #007bff !important; border: none; }
+.kv-actions .btn.btn-primary:hover { background: rgba(0,123,255,0.5) !important; }
 .input-mode-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
 .input-mode-tabs .tab { padding: 4px 12px; font-size: 12px; border: 1px solid #ddd; background: #f5f5f5; cursor: pointer; border-radius: 4px; }
 .input-mode-tabs .tab.active { background: #007bff; color: #fff; border-color: #007bff; }
