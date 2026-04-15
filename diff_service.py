@@ -77,7 +77,7 @@ class DiffService:
             # 尝试解析JSON响应
             try:
                 return response.json()
-            except:
+            except (json.JSONDecodeError, ValueError):
                 return {'text': response.text, 'status_code': response.status_code}
         except requests.exceptions.Timeout:
             raise Exception('请求超时')

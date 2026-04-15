@@ -1,6 +1,9 @@
 let currentProjectId = null;
 let currentGroupId = null;
 let envDataCache = []; // 缓存当前项目的环境列表
+let currentTestCaseId = null; // 当前加载的用例ID（用于更新）
+const _testCaseCache = {}; // 用例数据缓存 { id: testCaseObject }
+let lastDiffResult = null; // 最近一次对比的完整结果对象
 
 // 排序状态（每个列表独立）
 const sortState = { projects: 'default', environments: 'default', groups: 'default', apis: 'default' };
@@ -187,24 +190,125 @@ function onSortChange(listType, value) {
 // 拖拽排序系统
 let dragSrcEl = null;
 
+// ==================== 自定义鼠标拖拽排序（不使用HTML5 DnD，避免干扰click/dblclick）====================
+
+let _dragState = { srcEl: null, startY: 0, started: false, clone: null };
+
 function makeSortable(listEl, listType) {
     const items = listEl.querySelectorAll('.tree-item:not(.empty-tip)');
     items.forEach(item => {
-        item.setAttribute('draggable', 'true');
-        item.addEventListener('dragstart', handleDragStart);
-        item.addEventListener('dragover', handleDragOver);
-        item.addEventListener('dragenter', handleDragEnter);
-        item.addEventListener('dragleave', handleDragLeave);
-        item.addEventListener('drop', handleDrop);
-        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('mousedown', _onDragMouseDown);
     });
 }
 
-function handleDragStart(e) {
-    dragSrcEl = this;
-    this.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', this.id);
+function _onDragMouseDown(e) {
+    // 只响应左键，忽略按钮/链接/三角箭头等交互元素上的操作
+    if (e.button !== 0 || e.target.closest('button,.tc-toggle,.test-case-item')) return;
+
+    _dragState.srcEl = this;
+    _dragState.startY = e.clientY;
+    _dragState.started = false;
+
+    document.addEventListener('mousemove', _onDragMouseMove);
+    document.addEventListener('mouseup', _onDragMouseUp);
+    // 注意：这里不调用 preventDefault，否则会阻止后续的 click/dblclick 事件
+}
+
+function _onDragMouseMove(e) {
+    if (!_dragState.srcEl) return;
+
+    const dy = Math.abs(e.clientY - _dragState.startY);
+
+    // 超过5px阈值才真正开始拖拽（区分点击和拖动）
+    if (!_dragState.started && dy > 5) {
+        _dragState.started = true;
+
+        // 开始拖拽时才阻止默认行为（防止文本选中）
+        e.preventDefault();
+
+        _dragState.srcEl.classList.add('dragging');
+        _dragState.srcEl.style.userSelect = 'none';
+
+        // 创建半透明占位克隆跟随鼠标
+        const rect = _dragState.srcEl.getBoundingClientRect();
+        _dragState.clone = _dragState.srcEl.cloneNode(true);
+        _dragState.clone.style.position = 'fixed';
+        _dragState.clone.style.width = rect.width + 'px';
+        _dragState.clone.style.zIndex = '9999';
+        _dragState.clone.style.opacity = '0.6';
+        _dragState.clone.style.pointerEvents = 'none';
+        _dragState.clone.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        document.body.appendChild(_dragState.clone);
+        _dragState.srcEl.style.opacity = '0.3';
+    }
+
+    if (_dragState.started && _dragState.clone) {
+        // 克隆元素跟随鼠标Y轴
+        _dragState.clone.style.top = (e.clientY - _dragState.startY + _dragState.startY - _dragState.srcEl.offsetHeight / 2) + 'px';
+        _dragState.clone.style.left = _dragState.srcEl.getBoundingClientRect().left + 'px';
+
+        // 高亮当前悬停的目标位置
+        _highlightDropTarget(e.clientY);
+    }
+}
+
+function _highlightDropTarget(mouseY) {
+    // 移除所有高亮
+    document.querySelectorAll('.tree-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+    // 找到鼠标所在位置的列表项
+    const allItems = Array.from(document.querySelectorAll('.tree-item:not(.dragging)'));
+    let target = null;
+    for (const el of allItems) {
+        const rect = el.getBoundingClientRect();
+        if (mouseY >= rect.top && mouseY <= rect.bottom) {
+            target = el;
+            break;
+        }
+    }
+    if (target && target !== _dragState.srcEl) {
+        target.classList.add('drag-over');
+    }
+}
+
+function _onDragMouseUp(e) {
+    document.removeEventListener('mousemove', _onDragMouseMove);
+    document.removeEventListener('mouseup', _onDragMouseUp);
+
+    if (!_dragState.srcEl) return;
+
+    // 清理克隆元素
+    if (_dragState.clone) {
+        _dragState.clone.remove();
+        _dragState.clone = null;
+    }
+    _dragState.srcEl.classList.remove('dragging');
+    _dragState.srcEl.style.opacity = '';
+    _dragState.srcEl.style.userSelect = '';
+
+    // 如果已经进入拖拽状态，执行排序
+    if (_dragState.started) {
+        const dropTarget = document.querySelector('.tree-item.drag-over');
+        if (dropTarget && dropTarget !== _dragState.srcEl) {
+            const listEl = _dragState.srcEl.parentNode;
+            const srcIdx = Array.from(listEl.querySelectorAll('.tree-item')).indexOf(_dragState.srcEl);
+            const dstIdx = Array.from(listEl.querySelectorAll('.tree-item')).indexOf(dropTarget);
+            if (srcIdx < dstIdx) {
+                dropTarget.after(_dragState.srcEl);
+            } else {
+                dropTarget.before(_dragState.srcEl);
+            }
+            // 保存新顺序
+            const newOrder = Array.from(listEl.querySelectorAll('.tree-item')).map(el => {
+                return parseInt(el.id.split('-').pop());
+            }).filter(id => !isNaN(id));
+            saveReorder(listEl.id, newOrder);
+        }
+        document.querySelectorAll('.tree-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+    }
+
+    _dragState.srcEl = null;
+    _dragState.started = false;
 }
 
 function handleDragOver(e) {
@@ -312,11 +416,10 @@ async function loadProjects() {
         const listEl = document.getElementById('projectList');
         listEl.innerHTML = projects.map(p => `
             <div class="tree-item sortable" onclick="selectProject(${p.id})" id="project-${p.id}">
-                <span class="drag-handle" title="拖拽排序">&#9776;</span>
                 <span class="item-name" data-name="${esc(p.name)}" data-desc="${esc(p.description||'')}">&#128193; ${esc(p.name)}</span>
                 <div class="actions">
-                    <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openProjectModal(${p.id})">编辑</button>
-                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject(${p.id})">删除</button>
+                    <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openProjectModal(${p.id})">✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject(${p.id})">🗑️</button>
                 </div>
             </div>
         `).join('') || '<div class="empty-tip">暂无项目</div>';
@@ -408,11 +511,10 @@ async function loadEnvironments(projectId) {
     const listEl = document.getElementById('envList');
     listEl.innerHTML = envDataCache.map(e => `
         <div class="tree-item sortable" id="env-${e.id}">
-            <span class="drag-handle" title="拖拽排序">&#9776;</span>
             <span class="item-name" data-name="${esc(e.name)}" data-url="${esc(e.base_url)}" data-desc="${esc(e.description||'')}">&#127760; ${esc(e.name)}</span>
             <div class="actions">
-                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openEnvModal(${e.id})">编辑</button>
-                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteEnv(${e.id})">删除</button>
+                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openEnvModal(${e.id})">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteEnv(${e.id})">🗑️</button>
             </div>
         </div>
     `).join('') || '<div class="empty-tip">暂无环境，请新建</div>';
@@ -507,11 +609,10 @@ async function loadGroups(projectId) {
     const listEl = document.getElementById('groupList');
     listEl.innerHTML = groups.map(g => `
         <div class="tree-item sortable" onclick="selectGroup(${g.id})" id="group-${g.id}">
-            <span class="drag-handle" title="拖拽排序">&#9776;</span>
             <span class="item-name" data-name="${esc(g.name)}" data-desc="${esc(g.description||'')}">&#128194; ${esc(g.name)}</span>
             <div class="actions">
-                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openGroupModal(${g.id})">编辑</button>
-                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteGroup(${g.id})">删除</button>
+                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openGroupModal(${g.id})">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑️</button>
             </div>
         </div>
     `).join('') || '<div class="empty-tip">暂无分组，请新建</div>';
@@ -600,19 +701,40 @@ async function loadApis(groupId) {
     const apis = await res.json();
     const listEl = document.getElementById('apiList');
     listEl.innerHTML = apis.map(a => `
-        <div class="tree-item sortable" onclick="selectApiForDiff(${a.id})" id="api-${a.id}">
-            <span class="drag-handle" title="拖拽排序">&#9776;</span>
-            <span class="item-name" data-name="${esc(a.name)}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers||'{}')}" data-body="${esc(a.body||'')}">&#128279; ${esc(a.name)} <small style="color:#999">[${esc(a.method)}] ${esc(a.path)}</small></span>
+        <div class="tree-item sortable api-card" onclick="selectApiForDiff(${a.id})" id="api-${a.id}">
+            <span class="tc-toggle" onclick="event.stopPropagation();toggleTestCases(this.parentElement)" title="点击/双击展开收起用例">▶</span>
+            <span class="item-name" data-name="${esc(a.name)}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers||'{}')}" data-body="${esc(a.body||'')}">&#128279; ${esc(a.name)}<span class="api-path">${esc(a.path)}</span></span>
             <div class="actions">
-                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openApiModal(${a.id})">编辑</button>
-                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteApi(${a.id})">删除</button>
+                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openApiModal(${a.id})">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteApi(${a.id})">🗑️</button>
             </div>
+            <div class="test-case-list" id="tc-${a.id}" style="display:none;"></div>
         </div>
     `).join('') || '<div class="empty-tip">暂无API，请新建</div>';
     makeSortable(listEl, 'apis');
+    // 预加载每个API的测试用例数据到隐藏容器中
+    for (const a of apis) {
+        const apiEl = document.getElementById('api-' + a.id);
+        if (apiEl) loadTestCases(a.id, apiEl);
+    }
     // 自动选择第一个API
     if (apis.length > 0) {
         selectApiForDiff(apis[0].id);
+    }
+}
+
+/** 展开/收起某API下的测试用例列表 */
+function toggleTestCases(cardEl) {
+    const tcContainer = cardEl.querySelector('.test-case-list');
+    const arrow = cardEl.querySelector('.tc-toggle');
+    if (!tcContainer || !arrow) return;
+    const isHidden = window.getComputedStyle(tcContainer).display === 'none';
+    tcContainer.style.display = isHidden ? 'block' : 'none';
+    arrow.textContent = isHidden ? '▼' : '▶';
+    // 展开时如果还没加载过内容，则加载
+    if (isHidden && tcContainer.children.length === 0) {
+        const apiId = parseInt(cardEl.id.replace('api-', '')) || 0;
+        loadTestCases(apiId, cardEl);
     }
 }
 
@@ -667,6 +789,8 @@ function onDiffApiChange() {
 
 function selectApiForDiff(apiId) {
     document.getElementById('diffApiSelect').value = apiId;
+    currentTestCaseId = null;  // 切换API时清除当前用例
+    document.getElementById('saveCaseBtn').textContent = '保存用例';
     onDiffApiChange();
 }
 
@@ -692,13 +816,173 @@ async function executeDiff() {
     });
     const result = await res.json();
     if (result.success) {
+        lastDiffResult = result;  // 缓存结果，供保存用例时使用
         renderDiffResult(result);
     } else {
         document.getElementById('diffResult').innerHTML = '<div class="result result-error">&#10060; ' + esc(result.error) + '</div>';
     }
 }
 
-// ==================== 渲染对比结果（FeHelper风格：左右并排JSON对比）====================
+// ==================== 测试用例管理 ====================
+
+/** 保存当前表单为测试用例（新建或更新） */
+async function saveTestCase() {
+    const apiId = document.getElementById('diffApiSelect').value;
+    if (!apiId) return alert('请先选择一个API');
+
+    const url1 = document.getElementById('url1').value.trim();
+    const url2 = document.getElementById('url2').value.trim();
+    if (!url1 || !url2) return alert('请先填写环境1和环境2的URL');
+
+    // 更新模式：直接保存，不弹窗
+    // 新建模式：弹窗输入名称
+    let caseName = null;
+    if (currentTestCaseId) {
+        // 已有用例ID → 更新模式，直接使用原名称
+        caseName = null;  // 后端会用 tc.name 保持不变
+    } else {
+        // 新建 → 需要输入名称
+        caseName = prompt('请输入用例名称：', '用例' + new Date().toLocaleTimeString());
+        if (!caseName) return;  // 用户取消
+    }
+
+    // 收集当前表单数据
+    const data = {
+        id: currentTestCaseId || undefined,
+        name: caseName,
+        env1_id: document.getElementById('env1Select').value || null,
+        env2_id: document.getElementById('env2Select').value || null,
+        url1: url1,
+        url2: url2,
+        method: document.getElementById('method').value,
+        headers1: getFieldJsonValue('headers1'),
+        headers2: getFieldJsonValue('headers2'),
+        body1: getFieldJsonValue('body1'),
+        body2: getFieldJsonValue('body2'),
+        diff_result: lastDiffResult || null  // 保存最近一次对比结果（含响应数据+差异）
+    };
+
+    try {
+        const res = await fetch('/api/apis/' + apiId + '/test-cases', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+            const isUpdate = !!currentTestCaseId;  // 在覆盖前记录是否为更新
+            currentTestCaseId = result.id;  // 保存后，后续保存就是更新
+            document.getElementById('saveCaseBtn').textContent = '更新用例';
+            alert(isUpdate ? '用例已更新' : '用例已保存');
+            // 刷新左侧API列表中的用例显示
+            if (currentGroupId) loadApis(currentGroupId);
+        } else {
+            alert('保存失败: ' + (result.error || '未知错误'));
+        }
+    } catch(e) {
+        alert('请求失败: ' + e.message);
+    }
+}
+
+/** 加载某API的测试用例并渲染到对应的API卡片下方（容器由loadApis预创建） */
+async function loadTestCases(apiId, apiEl) {
+    try {
+        const res = await fetch('/api/apis/' + apiId + '/test-cases');
+        const cases = await res.json();
+
+        // 使用loadApis中预创建的容器
+        const tcContainer = apiEl.querySelector('.test-case-list');
+        if (!tcContainer) return;
+
+        // 缓存用例数据到全局map
+        for (const tc of cases) {
+            _testCaseCache[tc.id] = tc;
+        }
+
+        if (cases.length === 0) {
+            tcContainer.innerHTML = '<div class="tc-empty-tip">暂无用例</div>';
+            return;
+        }
+
+        tcContainer.innerHTML = cases.map(tc => `
+            <div class="test-case-item" data-tc-id="${tc.id}" onclick="event.stopPropagation();applyTestCaseById(${tc.id})" title="点击加载此用例">
+                <span>&#128736;</span>
+                <span class="tc-name">${esc(tc.name)}</span>
+                <span class="tc-time">${tc.updated_at ? tc.updated_at.replace('T', ' ').substring(0, 19) : ''}</span>
+                <button class="tc-delete" onclick="event.stopPropagation();deleteTestCase(${tc.id}, this)" title="删除">🗑️</button>
+            </div>
+        `).join('');
+    } catch(e) {
+        console.warn('加载用例失败:', e);
+    }
+}
+
+/** 根据ID从缓存取数据并填充右侧面板 */
+function applyTestCaseById(tcId) {
+    const tc = _testCaseCache[tcId];
+    if (!tc) { alert('用例数据未找到'); return; }
+    applyTestCase(tc);
+}
+
+/** 将用例数据填充到右侧对比面板 */
+function applyTestCase(tc) {
+    currentTestCaseId = tc.id;
+
+    // 选中和填充API
+    document.getElementById('diffApiSelect').value = tc.api_id || document.getElementById('diffApiSelect').value;
+
+    // 填充环境选择（如果env_id存在）
+    if (tc.env1_id) document.getElementById('env1Select').value = tc.env1_id;
+    if (tc.env2_id) document.getElementById('env2Select').value = tc.env2_id;
+
+    // 填充URL
+    document.getElementById('url1').value = tc.url1 || '';
+    document.getElementById('url2').value = tc.url2 || '';
+
+    // 填充方法
+    document.getElementById('method').value = tc.method || 'POST';
+
+    // 填充Headers和Body
+    setFieldValue('headers1', tc.headers1 || '{}');
+    setFieldValue('headers2', tc.headers2 || '{}');
+    setFieldValue('body1', tc.body1 || '{}');
+    setFieldValue('body2', tc.body2 || '{}');
+
+    // 更新按钮文字提示
+    document.getElementById('saveCaseBtn').textContent = '更新用例';
+
+    // 如果有diff_result，直接展示
+    if (tc.diff_result) {
+        try {
+            renderDiffResult(JSON.parse(tc.diff_result));
+        } catch(e) {}
+    }
+
+    // 高亮当前选中的用例
+    document.querySelectorAll('.test-case-item').forEach(el => el.classList.remove('active'));
+    const activeEl = document.querySelector(`.test-case-item[data-tc-id="${tc.id}"]`);
+    if (activeEl) activeEl.classList.add('active');
+}
+
+/** 删除测试用例 */
+async function deleteTestCase(tcId, btnEl) {
+    if (!confirm('确定删除该用例？')) return;
+    try {
+        await fetch('/api/test-cases/' + tcId, { method: 'DELETE' });
+        // 如果删除的是当前加载的用例，清除状态
+        if (currentTestCaseId === tcId) {
+            currentTestCaseId = null;
+            document.getElementById('saveCaseBtn').textContent = '保存用例';
+        }
+        // 从DOM中移除
+        btnEl.closest('.test-case-item').remove();
+        // 如果容器空了就清空
+        const container = btnEl.closest('.test-case-list');
+        if (container && !container.querySelector('.test-case-item')) container.innerHTML = '';
+    } catch(e) {
+        alert('删除失败: ' + e.message);
+    }
+}
 function renderDiffResult(result) {
     const diff = result.diff || {};
     const added = diff.added || {};
@@ -969,11 +1253,6 @@ function _renderColoredJson(text, diffInfo, side) {
     return html.join('\n');
 }
 
-/** 生成一行HTML */
-function _line(text, cls) {
-    return '<div class="sbd-line' + (cls ? ' ' + cls : '') + '">' + escHtmlEntities(text) + '</div>';
-}
-
 /**
  * 同步递归配对渲染：同时遍历两侧对象，生成配对的HTML行
  * 每一对(leftLine, rightLine)代表同一逻辑位置
@@ -1142,7 +1421,6 @@ function _basicValStr(v) {
     return String(v);
 }
 
-// 同步滚动
 function syncScroll() {
     const leftBody = document.getElementById('sbd-left-body');
     const rightBody = document.getElementById('sbd-right-body');

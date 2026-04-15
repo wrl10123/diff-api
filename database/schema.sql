@@ -97,3 +97,28 @@ CREATE TABLE `diff_records` (
     KEY `idx_api_id` (`api_id`),
     CONSTRAINT `fk_diff_records_api` FOREIGN KEY (`api_id`) REFERENCES `api_configs` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='对比记录表';
+
+-- -----------------------------------------------------------
+-- 测试用例表 (test_cases)
+-- -----------------------------------------------------------
+DROP TABLE IF EXISTS `test_cases`;
+CREATE TABLE `test_cases` (
+    `id`          INT           NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `api_id`      INT           NOT NULL                COMMENT 'API配置ID',
+    `name`        VARCHAR(100)  NOT NULL DEFAULT '未命名用例' COMMENT '用例名称',
+    `env1_id`     INT                                   COMMENT '环境1 ID',
+    `env2_id`     INT                                   COMMENT '环境2 ID',
+    `url1`        VARCHAR(500)  NOT NULL                COMMENT '环境1完整URL',
+    `url2`        VARCHAR(500)  NOT NULL                COMMENT '环境2完整URL',
+    `method`      VARCHAR(10)   DEFAULT 'POST'          COMMENT '请求方法',
+    `headers1`    TEXT                                  COMMENT '环境1请求头(JSON字符串)',
+    `headers2`    TEXT                                  COMMENT '环境2请求头(JSON字符串)',
+    `body1`       TEXT                                  COMMENT '环境1请求体(JSON字符串)',
+    `body2`       TEXT                                  COMMENT '环境2请求体(JSON字符串)',
+    `diff_result` TEXT                                  COMMENT '最近一次对比结果(JSON)',
+    `created_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_api_id` (`api_id`),
+    CONSTRAINT `fk_test_cases_api` FOREIGN KEY (`api_id`) REFERENCES `api_configs` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试用例表';

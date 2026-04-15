@@ -84,3 +84,24 @@ class DiffRecord(db.Model):
     env2_response = db.Column(db.Text, comment='环境2响应(截取前2000字符)')
     diff_result = db.Column(db.Text, comment='对比结果(JSON,截取前2000字符)')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
+
+
+class TestCase(db.Model):
+    """测试用例表 — 保存某API的对比参数（环境、Headers、Body、结果）"""
+    __tablename__ = 'test_cases'
+
+    id = db.Column(db.Integer, primary_key=True)
+    api_id = db.Column(db.Integer, db.ForeignKey('api_configs.id', ondelete='CASCADE'), nullable=False, comment='API配置ID')
+    name = db.Column(db.String(100), nullable=False, default='未命名用例', comment='用例名称')
+    env1_id = db.Column(db.Integer, comment='环境1 ID（关联environments表）')
+    env2_id = db.Column(db.Integer, comment='环境2 ID（关联environments表）')
+    url1 = db.Column(db.String(500), nullable=False, comment='环境1完整URL')
+    url2 = db.Column(db.String(500), nullable=False, comment='环境2完整URL')
+    method = db.Column(db.String(10), default='POST', comment='请求方法')
+    headers1 = db.Column(db.Text, comment='环境1请求头(JSON字符串)')
+    headers2 = db.Column(db.Text, comment='环境2请求头(JSON字符串)')
+    body1 = db.Column(db.Text, comment='环境1请求体(JSON字符串)')
+    body2 = db.Column(db.Text, comment='环境2请求体(JSON字符串)')
+    diff_result = db.Column(db.Text, comment='最近一次对比结果(JSON,截取前2000字符)')
+    created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')

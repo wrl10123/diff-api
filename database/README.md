@@ -20,6 +20,7 @@
 |------|------|----------|------|
 | v1.0 | - | 初始建表，5张表：projects, api_groups, api_configs, environments, diff_records | `001_init.sql` |
 | v1.1 | 2026-04-09 | 为 projects / api_groups / api_configs / environments 添加 sort_order 字段，支持拖拽排序 | `002_add_sort_order.sql` |
+| v1.2 | - | 新增 test_cases 表，支持保存/加载/更新测试用例（含环境URL、Headers、Body、对比结果） | 自动建表 |
 
 ## 表关系
 
@@ -27,7 +28,9 @@
 projects (项目)
   ├── api_groups (分组) ──┬── api_configs (API配置)
   │                       │       │
-  │                       │       └── diff_records (对比记录)
+  │                       │       ├── diff_records (对比记录)
+  │                       │       │
+  │                       │       └── test_cases (测试用例)
   │                       │
   └── environments (环境)
 ```

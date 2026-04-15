@@ -3,7 +3,7 @@ Flask应用配置和路由
 """
 import json
 from flask import Flask, request, jsonify, render_template
-from models import db, Project, ApiGroup, ApiConfig, Environment, DiffRecord
+from models import db, Project, ApiGroup, ApiConfig, Environment, DiffRecord, TestCase
 from diff_service import DiffService
 
 app = Flask(__name__)
@@ -446,10 +446,6 @@ def diff_apis():
 
     # 保存对比记录（响应数据截取前2000字符存库）
     if api_id and result['success']:
-        def _truncate(s, max_len=2000):
-            s = s or ''
-            return s[:max_len] if len(s) > max_len else s
-
         record = DiffRecord(
             api_id=api_id,
             env1_url=url1,
@@ -475,6 +471,90 @@ def get_diff_records(api_id):
         'diff_result': r.diff_result,
         'created_at': r.created_at.isoformat() if r.created_at else None
     } for r in records])
+
+
+# ==================== 测试用例管理 ====================
+
+def _truncate(s, max_len=2000):
+    """截取字符串到指定长度"""
+    s = s or ''
+    return s[:max_len] if len(s) > max_len else s
+
+
+@app.route('/api/apis/<int:api_id>/test-cases', methods=['POST'])
+def save_test_case(api_id):
+    """保存/更新测试用例（根据id判断是新建还是更新）"""
+    data = request.json
+    tc_id = data.get('id')  # 有id则更新，无则新建
+
+    def _dump(val):
+        return json.dumps(val) if isinstance(val, dict) else (val or '')
+
+    if tc_id:
+        # 更新已有用例
+        tc = TestCase.query.get_or_404(tc_id)
+        tc.name = data.get('name', tc.name)
+        tc.url1 = data.get('url1', tc.url1)
+        tc.url2 = data.get('url2', tc.url2)
+        tc.method = data.get('method', tc.method)
+        tc.headers1 = _dump(data.get('headers1'))
+        tc.headers2 = _dump(data.get('headers2'))
+        tc.body1 = _dump(data.get('body1'))
+        tc.body2 = _dump(data.get('body2'))
+        tc.env1_id = data.get('env1_id')
+        tc.env2_id = data.get('env2_id')
+        # 如果有对比结果也更新
+        if data.get('diff_result'):
+            tc.diff_result = _truncate(json.dumps(data['diff_result']))
+    else:
+        # 新建
+        tc = TestCase(
+            api_id=api_id,
+            name=data.get('name', '未命名用例'),
+            env1_id=data.get('env1_id'),
+            env2_id=data.get('env2_id'),
+            url1=data['url1'],
+            url2=data['url2'],
+            method=data.get('method', 'POST'),
+            headers1=_dump(data.get('headers1')),
+            headers2=_dump(data.get('headers2')),
+            body1=_dump(data.get('body1')),
+            body2=_dump(data.get('body2')),
+            diff_result=_truncate(json.dumps(data.get('diff_result'))) if data.get('diff_result') else None
+        )
+        db.session.add(tc)
+
+    db.session.commit()
+    return jsonify({'success': True, 'id': tc.id})
+
+
+@app.route('/api/apis/<int:api_id>/test-cases', methods=['GET'])
+def get_test_cases(api_id):
+    """获取某API下的所有测试用例"""
+    cases = TestCase.query.filter_by(api_id=api_id).order_by(TestCase.updated_at.desc()).all()
+    return jsonify([{
+        'id': c.id,
+        'name': c.name,
+        'env1_id': c.env1_id,
+        'env2_id': c.env2_id,
+        'url1': c.url1,
+        'url2': c.url2,
+        'method': c.method,
+        'headers1': c.headers1,
+        'headers2': c.headers2,
+        'body1': c.body1,
+        'body2': c.body2,
+        'updated_at': c.updated_at.isoformat() if c.updated_at else None
+    } for c in cases])
+
+
+@app.route('/api/test-cases/<int:tc_id>', methods=['DELETE'])
+def delete_test_case(tc_id):
+    """删除测试用例"""
+    tc = TestCase.query.get_or_404(tc_id)
+    db.session.delete(tc)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 # ==================== 前端页面 ====================

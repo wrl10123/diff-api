@@ -19,14 +19,17 @@
                     <div class="panel-title flex">
                         <span class="flex-1">项目管理</span>
                         <div style="display:flex;gap:4px;align-items:center;">
-                            <select id="projectSort" class="sort-select" onchange="onSortChange('projects', this.value)">
-                                <option value="default">默认排序</option>
-                                <option value="name_asc">名称↑</option>
-                                <option value="name_desc">名称↓</option>
-                                <option value="time_desc">最新优先</option>
-                                <option value="time_asc">最早优先</option>
-                            </select>
-                            <button class="btn btn-primary btn-sm" onclick="openProjectModal()">+ 新建</button>
+                            <div class="sort-dropdown">
+                                <button class="sort-btn" title="排序">⇅</button>
+                                <div class="sort-menu">
+                                    <div onclick="onSortChange('projects', 'default')">默认排序</div>
+                                    <div onclick="onSortChange('projects', 'name_asc')">名称 A→Z</div>
+                                    <div onclick="onSortChange('projects', 'name_desc')">名称 Z→A</div>
+                                    <div onclick="onSortChange('projects', 'time_desc')">最新优先</div>
+                                    <div onclick="onSortChange('projects', 'time_asc')">最早优先</div>
+                                </div>
+                            </div>
+                            <button class="btn-add" onclick="openProjectModal()" title="新建项目">+</button>
                         </div>
                     </div>
                     <div id="projectList" class="sortable-list"><div class="empty-tip">暂无项目</div></div>
@@ -36,14 +39,17 @@
                     <div class="panel-title flex">
                         <span class="flex-1">环境管理</span>
                         <div style="display:flex;gap:4px;align-items:center;">
-                            <select id="envSort" class="sort-select" onchange="onSortChange('environments', this.value)">
-                                <option value="default">默认排序</option>
-                                <option value="name_asc">名称↑</option>
-                                <option value="name_desc">名称↓</option>
-                                <option value="time_desc">最新优先</option>
-                                <option value="time_asc">最早优先</option>
-                            </select>
-                            <button class="btn btn-primary btn-sm" id="addEnvBtn" onclick="openEnvModal()">+ 新建</button>
+                            <div class="sort-dropdown">
+                                <button class="sort-btn" title="排序">⇅</button>
+                                <div class="sort-menu">
+                                    <div onclick="onSortChange('environments', 'default')">默认排序</div>
+                                    <div onclick="onSortChange('environments', 'name_asc')">名称 A→Z</div>
+                                    <div onclick="onSortChange('environments', 'name_desc')">名称 Z→A</div>
+                                    <div onclick="onSortChange('environments', 'time_desc')">最新优先</div>
+                                    <div onclick="onSortChange('environments', 'time_asc')">最早优先</div>
+                                </div>
+                            </div>
+                            <button class="btn-add" id="addEnvBtn" onclick="openEnvModal()" title="新建环境">+</button>
                         </div>
                     </div>
                     <div id="envList" class="sortable-list"><div class="empty-tip">请先选择项目</div></div>
@@ -53,15 +59,18 @@
                     <div class="panel-title flex">
                         <span class="flex-1">分组管理</span>
                         <div style="display:flex;gap:4px;align-items:center;">
-                            <select id="groupSort" class="sort-select" onchange="onSortChange('groups', this.value)">
-                                <option value="default">默认排序</option>
-                                <option value="name_asc">名称↑</option>
-                                <option value="name_desc">名称↓</option>
-                                <option value="time_desc">最新优先</option>
-                                <option value="time_asc">最早优先</option>
-                            </select>
-                            <button class="btn btn-primary btn-sm" id="addGroupBtn" onclick="openGroupModal()" style="display:none">+ 新建</button>
-                            <button class="btn btn-accent btn-sm" id="importApiBtn" onclick="openImportModal()" style="display:none">导入</button>
+                            <div class="sort-dropdown">
+                                <button class="sort-btn" title="排序">⇅</button>
+                                <div class="sort-menu">
+                                    <div onclick="onSortChange('groups', 'default')">默认排序</div>
+                                    <div onclick="onSortChange('groups', 'name_asc')">名称 A→Z</div>
+                                    <div onclick="onSortChange('groups', 'name_desc')">名称 Z→A</div>
+                                    <div onclick="onSortChange('groups', 'time_desc')">最新优先</div>
+                                    <div onclick="onSortChange('groups', 'time_asc')">最早优先</div>
+                                </div>
+                            </div>
+                            <button class="btn-add" id="addGroupBtn" onclick="openGroupModal()" style="display:none" title="新建分组">+</button>
+                            <button class="btn-add" id="importApiBtn" onclick="openImportModal()" style="display:none" title="导入OpenAPI">⬇</button>
                         </div>
                     </div>
                     <div id="groupList" class="sortable-list"><div class="empty-tip">请先选择项目</div></div>
@@ -71,14 +80,17 @@
                     <div class="panel-title flex">
                         <span class="flex-1">API列表</span>
                         <div style="display:flex;gap:4px;align-items:center;">
-                            <select id="apiSort" class="sort-select" onchange="onSortChange('apis', this.value)">
-                                <option value="default">默认排序</option>
-                                <option value="name_asc">名称↑</option>
-                                <option value="name_desc">名称↓</option>
-                                <option value="time_desc">最新优先</option>
-                                <option value="time_asc">最早优先</option>
-                            </select>
-                            <button class="btn btn-primary btn-sm" id="addApiBtn" onclick="openApiModal()" style="display:none">+ 新建</button>
+                            <div class="sort-dropdown">
+                                <button class="sort-btn" title="排序">⇅</button>
+                                <div class="sort-menu">
+                                    <div onclick="onSortChange('apis', 'default')">默认排序</div>
+                                    <div onclick="onSortChange('apis', 'name_asc')">名称 A→Z</div>
+                                    <div onclick="onSortChange('apis', 'name_desc')">名称 Z→A</div>
+                                    <div onclick="onSortChange('apis', 'time_desc')">最新优先</div>
+                                    <div onclick="onSortChange('apis', 'time_asc')">最早优先</div>
+                                </div>
+                            </div>
+                            <button class="btn-add" id="addApiBtn" onclick="openApiModal()" style="display:none" title="新建API">+</button>
                         </div>
                     </div>
                     <div id="apiList" class="sortable-list"><div class="empty-tip">请先选择分组</div></div>
@@ -208,7 +220,10 @@
                         </select>
                     </div>
 
-                    <button class="btn btn-success" onclick="executeDiff()">执行对比</button>
+                    <div class="flex" style="gap:8px;">
+                        <button class="btn btn-success" onclick="executeDiff()">执行对比</button>
+                        <button class="btn btn-accent" onclick="saveTestCase()" id="saveCaseBtn">保存用例</button>
+                    </div>
                 </div>
 
                 <div class="panel">
