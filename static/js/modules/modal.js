@@ -22,12 +22,15 @@ export function closeModal(id) {
  * 初始化弹窗事件
  */
 export function initModals() {
-    // 点击弹窗遮罩层关闭弹窗
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+    // ESC键关闭弹窗
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay.active').forEach(modal => {
                 modal.classList.remove('active');
-            }
-        });
+            });
+        }
     });
 }
+
+// 绑定到 window 以便 HTML 中 onclick 调用
+window.closeModal = closeModal;

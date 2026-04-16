@@ -1,21 +1,27 @@
 /**
- * API管理模块
+ * API管理模块 - 适配目录结构
  */
 import { esc, stripJsonComments } from './utils.js';
 import { openModal, closeModal } from './modal.js';
-import { makeSortable } from './sortable.js';
 import { currentProjectId, sortState } from './project.js';
 import { setFieldValue, getFieldJsonValue } from './kvInput.js';
 import { loadTestCases, toggleTestCases } from './testCase.js';
+import { loadFolders } from './folder.js';
+import { onEnvChange } from './environment.js';
 
 /**
  * 打开API弹窗
  * @param {number} [id] - API ID，不传则为新建
+ * @param {number} [folderId] - 目录ID（新建时使用）
  */
-export function openApiModal(id) {
-    if (!window.currentGroupId) return alert('请先选择分组');
+export function openApiModal(id, folderId = null) {
+    const targetFolderId = folderId || window.currentFolderId;
+    if (!targetFolderId) return alert('请先选择目录');
+    
     document.getElementById('editApiId').value = id || '';
+    document.getElementById('apiFolderId').value = targetFolderId;
     document.getElementById('apiModalTitle').textContent = id ? '编辑API' : '新建API';
+    
     if (id) {
         fetch('/api/apis/' + id).then(r => r.json()).then(api => {
             document.getElementById('apiName').value = api.name;
@@ -41,6 +47,7 @@ export function openApiModal(id) {
  */
 export async function saveApi() {
     const id = document.getElementById('editApiId').value;
+    const folderId = document.getElementById('apiFolderId').value;
     const name = document.getElementById('apiName').value.trim();
     const path = document.getElementById('apiPath').value.trim();
     if (!name || !path) return alert('请输入API名称和Path');
@@ -55,42 +62,11 @@ export async function saveApi() {
     if (id) {
         await fetch('/api/apis/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     } else {
-        await fetch('/api/groups/' + window.currentGroupId + '/apis', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        await fetch('/api/folders/' + folderId + '/apis', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     }
     closeModal('apiModal');
-    if (window.currentGroupId) loadApis(window.currentGroupId);
+    if (currentProjectId) loadFolders(currentProjectId);
     loadApisForDiff();
-}
-
-/**
- * 加载API列表
- * @param {number} groupId - 分组ID
- */
-export async function loadApis(groupId) {
-    if (!groupId) return;
-    const sortParam = sortState.apis !== 'default' ? '?sort=' + sortState.apis : '';
-    const res = await fetch('/api/groups/' + groupId + '/apis' + sortParam);
-    const apis = await res.json();
-    const listEl = document.getElementById('apiList');
-    listEl.innerHTML = apis.map(a => `
-        <div class="tree-item sortable api-card" onclick="selectApiForDiff(${a.id})" id="api-${a.id}">
-            <span class="tc-toggle" onclick="event.stopPropagation();toggleTestCases(this.parentElement)" title="点击/双击展开收起用例">▶</span>
-            <span class="item-name" data-name="${esc(a.name)}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers||'{}')}" data-body="${esc(a.body||'')}">&#128279; ${esc(a.name)}<span class="api-path">${esc(a.path)}</span></span>
-            <div class="actions">
-                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openApiModal(${a.id})">✏️</button>
-                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteApi(${a.id})">🗑️</button>
-            </div>
-            <div class="test-case-list" id="tc-${a.id}" style="display:none;"></div>
-        </div>
-    `).join('') || '<div class="empty-tip">暂无API，请新建</div>';
-    makeSortable(listEl, 'apis');
-    for (const a of apis) {
-        const apiEl = document.getElementById('api-' + a.id);
-        if (apiEl) loadTestCases(a.id, apiEl);
-    }
-    if (apis.length > 0) {
-        selectApiForDiff(apis[0].id);
-    }
 }
 
 /**
@@ -98,32 +74,53 @@ export async function loadApis(groupId) {
  */
 export async function loadApisForDiff() {
     if (!currentProjectId) return;
-    const res = await fetch('/api/projects/' + currentProjectId + '/groups');
-    const groups = await res.json();
+    const res = await fetch('/api/projects/' + currentProjectId + '/folders');
+    const folders = await res.json();
+    
+    // 递归收集所有API
     let allApis = [];
-    for (const g of groups) {
-        const res = await fetch('/api/groups/' + g.id + '/apis');
-        const apis = await res.json();
-        allApis = allApis.concat(apis.map(a => ({...a, groupName: g.name})));
+    function collectApis(nodes, folderName) {
+        for (const node of nodes) {
+            const currentFolderName = folderName ? folderName + ' / ' + node.name : node.name;
+            if (node.apis) {
+                allApis = allApis.concat(node.apis.map(a => ({...a, folderName: currentFolderName})));
+            }
+            if (node.children) {
+                collectApis(node.children, currentFolderName);
+            }
+        }
     }
+    collectApis(folders);
+    
     const select = document.getElementById('diffApiSelect');
     select.innerHTML = '<option value="">请选择...</option>' +
-        allApis.map(a => `<option value="${a.id}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers||'')}" data-body="${esc(a.body||'')}">[${esc(a.groupName)}] ${esc(a.name)} - ${esc(a.path)}</option>`).join('');
+        allApis.map(a => `<option value="${a.id}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers||'')}" data-body="${esc(a.body||'')}">[${esc(a.folderName)}] ${esc(a.name)} - ${esc(a.path)}</option>`).join('');
 }
 
 /**
  * API选择变更
+ * @param {Object} [apiData] - 直接传入API数据（从目录树点击时使用）
  */
-export function onDiffApiChange() {
-    const sel = document.getElementById('diffApiSelect');
-    const opt = sel.selectedOptions[0];
-    if (!opt || !opt.value) return;
-    const apiPath = opt.dataset.path || '';
-    const apiMethod = opt.dataset.method || 'POST';
-    let apiHeaders = {};
-    let apiBody = {};
-    try { apiHeaders = JSON.parse(stripJsonComments(opt.dataset.headers || '{}')); } catch(e) {}
-    try { apiBody = JSON.parse(stripJsonComments(opt.dataset.body || '{}')); } catch(e) {}
+export function onDiffApiChange(apiData = null) {
+    let apiPath, apiMethod, apiHeaders, apiBody;
+    
+    if (apiData) {
+        // 从目录树点击传入的数据
+        apiPath = apiData.path || '';
+        apiMethod = apiData.method || 'POST';
+        try { apiHeaders = JSON.parse(stripJsonComments(apiData.headers || '{}')); } catch(e) { apiHeaders = {}; }
+        try { apiBody = JSON.parse(stripJsonComments(apiData.body || '{}')); } catch(e) { apiBody = {}; }
+    } else {
+        // 从下拉框选择
+        const sel = document.getElementById('diffApiSelect');
+        const opt = sel.selectedOptions[0];
+        if (!opt || !opt.value) return;
+        apiPath = opt.dataset.path || '';
+        apiMethod = opt.dataset.method || 'POST';
+        try { apiHeaders = JSON.parse(stripJsonComments(opt.dataset.headers || '{}')); } catch(e) { apiHeaders = {}; }
+        try { apiBody = JSON.parse(stripJsonComments(opt.dataset.body || '{}')); } catch(e) { apiBody = {}; }
+    }
+    
     document.getElementById('method').value = apiMethod;
     for (const side of [1, 2]) {
         const envHeaders = getFieldJsonValue('headers' + side);
@@ -150,9 +147,57 @@ export function onDiffApiChange() {
  * @param {number} apiId - API ID
  */
 export function selectApiForDiff(apiId) {
+    // 更新下拉框选择
     document.getElementById('diffApiSelect').value = apiId;
     window.currentTestCaseId = null;
     document.getElementById('saveCaseBtn').textContent = '保存用例';
+    
+    // 从API元素获取数据（更可靠）
+    const apiEl = document.querySelector(`[data-api-id="${apiId}"]`);
+    if (apiEl) {
+        const nameEl = apiEl.querySelector('.api-name');
+        if (nameEl) {
+            const apiPath = nameEl.dataset.path || '';
+            const apiMethod = nameEl.dataset.method || 'POST';
+            let apiHeaders = {};
+            let apiBody = {};
+            try { apiHeaders = JSON.parse(stripJsonComments(nameEl.dataset.headers || '{}')); } catch(e) {}
+            try { apiBody = JSON.parse(stripJsonComments(nameEl.dataset.body || '{}')); } catch(e) {}
+            
+            // 直接更新表单
+            document.getElementById('method').value = apiMethod;
+            for (const side of [1, 2]) {
+                const envHeaders = getFieldJsonValue('headers' + side);
+                const mergedHeaders = { ...envHeaders, ...apiHeaders };
+                setFieldValue('headers' + side, mergedHeaders);
+                const envBody = getFieldJsonValue('body' + side);
+                const finalBody = Object.keys(apiBody).length > 0 ? apiBody : envBody;
+                setFieldValue('body' + side, finalBody);
+            }
+            
+            // 更新URL - 确保path被正确拼接
+            // 先检查环境选择框是否有值，如果没有且环境列表不为空，则默认选择
+            const sel1 = document.getElementById('env1Select');
+            const sel2 = document.getElementById('env2Select');
+            
+            // 如果环境选择为空但有环境数据，设置默认值
+            if (!sel1.value && window.envDataCache && window.envDataCache.length > 0) {
+                sel1.value = window.envDataCache[0].id;
+            }
+            if (!sel2.value && window.envDataCache && window.envDataCache.length > 1) {
+                sel2.value = window.envDataCache[1].id;
+            } else if (!sel2.value && window.envDataCache && window.envDataCache.length > 0) {
+                sel2.value = window.envDataCache[0].id;
+            }
+            
+            // 触发环境变更以更新URL
+            onEnvChange(1);
+            onEnvChange(2);
+            return;
+        }
+    }
+    
+    // 回退到原来的方式
     onDiffApiChange();
 }
 
@@ -163,7 +208,7 @@ export function selectApiForDiff(apiId) {
 export async function deleteApi(id) {
     if (!confirm('确定删除该API?')) return;
     await fetch('/api/apis/' + id, { method: 'DELETE' });
-    if (window.currentGroupId) loadApis(window.currentGroupId);
+    if (currentProjectId) loadFolders(currentProjectId);
     loadApisForDiff();
 }
 

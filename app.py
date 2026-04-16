@@ -89,11 +89,144 @@ def delete_project(project_id: int) -> Response:
     return jsonify({'success': True})
 
 
-# ==================== 分组管理 ====================
+# ==================== 目录管理 ====================
 
+def build_folder_tree(folders: List[ApiGroup], apis_by_folder: Dict[int, List[ApiConfig]], sort_key: str = 'default') -> List[Dict[str, Any]]:
+    """构建目录树结构"""
+    folder_map: Dict[int, Dict[str, Any]] = {}
+    for f in folders:
+        folder_map[f.id] = {
+            'id': f.id,
+            'name': f.name,
+            'description': f.description,
+            'parent_id': f.parent_id,
+            'sort_order': f.sort_order or 0,
+            'created_at': f.created_at.isoformat() if f.created_at else None,
+            'children': [],
+            'apis': apis_by_folder.get(f.id, [])
+        }
+    # 构建树
+    roots: List[Dict[str, Any]] = []
+    for f in folders:
+        node = folder_map[f.id]
+        if f.parent_id and f.parent_id in folder_map:
+            folder_map[f.parent_id]['children'].append(node)
+        else:
+            roots.append(node)
+    # 递归排序
+    def sort_tree(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if sort_key == 'name_asc':
+            nodes.sort(key=lambda x: x['name'])
+        elif sort_key == 'name_desc':
+            nodes.sort(key=lambda x: x['name'], reverse=True)
+        elif sort_key == 'time_desc':
+            nodes.sort(key=lambda x: x['created_at'] or '', reverse=True)
+        elif sort_key == 'time_asc':
+            nodes.sort(key=lambda x: x['created_at'] or '')
+        else:
+            nodes.sort(key=lambda x: x['sort_order'])
+        for node in nodes:
+            if node['children']:
+                sort_tree(node['children'])
+        return nodes
+    return sort_tree(roots)
+
+
+@app.route('/api/projects/<int:project_id>/folders', methods=['GET'])
+def get_folders(project_id: int) -> Response:
+    """获取项目下的目录树（包含API）"""
+    sort_key: str = request.args.get('sort', 'default')
+    # 获取所有目录
+    folders: List[ApiGroup] = ApiGroup.query.filter_by(project_id=project_id).all()
+    # 获取所有API并按目录分组
+    apis: List[ApiConfig] = ApiConfig.query.filter(
+        ApiConfig.group_id.in_([f.id for f in folders])
+    ).all() if folders else []
+    apis_by_folder: Dict[int, List[Dict[str, Any]]] = {}
+    for a in apis:
+        if a.group_id not in apis_by_folder:
+            apis_by_folder[a.group_id] = []
+        apis_by_folder[a.group_id].append({
+            'id': a.id,
+            'name': a.name,
+            'path': a.path,
+            'method': a.method,
+            'headers': a.headers,
+            'body': a.body,
+            'description': a.description,
+            'sort_order': a.sort_order or 0,
+            'created_at': a.created_at.isoformat() if a.created_at else None
+        })
+    # 应用排序
+    if sort_key == 'name_asc':
+        for folder_id in apis_by_folder:
+            apis_by_folder[folder_id].sort(key=lambda x: x['name'])
+    elif sort_key == 'name_desc':
+        for folder_id in apis_by_folder:
+            apis_by_folder[folder_id].sort(key=lambda x: x['name'], reverse=True)
+    elif sort_key == 'time_desc':
+        for folder_id in apis_by_folder:
+            apis_by_folder[folder_id].sort(key=lambda x: x['created_at'] or '', reverse=True)
+    elif sort_key == 'time_asc':
+        for folder_id in apis_by_folder:
+            apis_by_folder[folder_id].sort(key=lambda x: x['created_at'] or '')
+    else:
+        for folder_id in apis_by_folder:
+            apis_by_folder[folder_id].sort(key=lambda x: x['sort_order'])
+    tree = build_folder_tree(folders, apis_by_folder, sort_key)
+    return jsonify(tree)
+
+
+@app.route('/api/projects/<int:project_id>/folders', methods=['POST'])
+def create_folder(project_id: int) -> Response:
+    """创建目录"""
+    data: Dict[str, Any] = request.json or {}
+    folder = ApiGroup(
+        project_id=project_id,
+        name=data.get('name', ''),
+        description=data.get('description', ''),
+        parent_id=data.get('parent_id')
+    )
+    db.session.add(folder)
+    db.session.commit()
+    return jsonify({'id': folder.id, 'name': folder.name})
+
+
+@app.route('/api/folders/<int:folder_id>', methods=['PUT'])
+def update_folder(folder_id: int) -> Response:
+    """更新目录"""
+    folder: ApiGroup = ApiGroup.query.get_or_404(folder_id)
+    data: Dict[str, Any] = request.json or {}
+    folder.name = data.get('name', folder.name)
+    folder.description = data.get('description', folder.description)
+    if 'parent_id' in data:
+        # 防止循环引用
+        new_parent = data['parent_id']
+        if new_parent == folder_id:
+            return jsonify({'success': False, 'error': '不能将自己设为父目录'}), 400
+        # 检查是否将父目录设为自己的子目录
+        if new_parent:
+            parent = ApiGroup.query.get(new_parent)
+            if parent and parent.parent_id == folder_id:
+                return jsonify({'success': False, 'error': '不能将子目录设为父目录'}), 400
+        folder.parent_id = new_parent
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/folders/<int:folder_id>', methods=['DELETE'])
+def delete_folder(folder_id: int) -> Response:
+    """删除目录（会级联删除子目录和API）"""
+    folder: ApiGroup = ApiGroup.query.get_or_404(folder_id)
+    db.session.delete(folder)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# 兼容旧的分组API（重定向到新API）
 @app.route('/api/projects/<int:project_id>/groups', methods=['GET'])
 def get_groups(project_id: int) -> Response:
-    """获取项目下的所有分组"""
+    """获取项目下的所有分组（兼容旧API，返回扁平列表）"""
     sort_key: str = request.args.get('sort', 'default')
     query = apply_sort(ApiGroup.query.filter_by(project_id=project_id), ApiGroup, sort_key)
     groups: List[ApiGroup] = query.all()
@@ -101,6 +234,7 @@ def get_groups(project_id: int) -> Response:
         'id': g.id,
         'name': g.name,
         'description': g.description,
+        'parent_id': g.parent_id,
         'sort_order': g.sort_order or 0,
         'created_at': g.created_at.isoformat() if g.created_at else None
     } for g in groups])
@@ -108,41 +242,37 @@ def get_groups(project_id: int) -> Response:
 
 @app.route('/api/projects/<int:project_id>/groups', methods=['POST'])
 def create_group(project_id: int) -> Response:
-    """创建分组"""
-    data: Dict[str, Any] = request.json or {}
-    group = ApiGroup(
-        project_id=project_id,
-        name=data.get('name', ''),
-        description=data.get('description', '')
-    )
-    db.session.add(group)
-    db.session.commit()
-    return jsonify({'id': group.id, 'name': group.name})
+    """创建分组（兼容旧API）"""
+    return create_folder(project_id)
 
 
 @app.route('/api/groups/<int:group_id>', methods=['PUT'])
 def update_group(group_id: int) -> Response:
-    """更新分组"""
-    group: ApiGroup = ApiGroup.query.get_or_404(group_id)
-    data: Dict[str, Any] = request.json or {}
-    group.name = data.get('name', group.name)
-    group.description = data.get('description', group.description)
-    db.session.commit()
-    return jsonify({'success': True})
+    """更新分组（兼容旧API）"""
+    return update_folder(group_id)
 
 
 @app.route('/api/groups/<int:group_id>', methods=['DELETE'])
 def delete_group(group_id: int) -> Response:
-    """删除分组"""
-    group: ApiGroup = ApiGroup.query.get_or_404(group_id)
-    db.session.delete(group)
-    db.session.commit()
-    return jsonify({'success': True})
+    """删除分组（兼容旧API）"""
+    return delete_folder(group_id)
+
+
+@app.route('/api/folders/<int:folder_id>/import-openapi', methods=['POST'])
+def import_openapi_folder(folder_id: int) -> Response:
+    """从OpenAPI/Swagger JSON导入API到指定目录"""
+    folder: ApiGroup = ApiGroup.query.get_or_404(folder_id)
+    return _import_openapi_impl(folder_id)
 
 
 @app.route('/api/groups/<int:group_id>/import-openapi', methods=['POST'])
 def import_openapi(group_id: int) -> Response:
-    """从OpenAPI/Swagger JSON导入API"""
+    """从OpenAPI/Swagger JSON导入API（兼容旧API）"""
+    return _import_openapi_impl(group_id)
+
+
+def _import_openapi_impl(group_id: int) -> Response:
+    """OpenAPI导入实现"""
     group: ApiGroup = ApiGroup.query.get_or_404(group_id)
     data: Dict[str, Any] = request.json or {}
     openapi_spec: Any = data.get('spec')
@@ -479,6 +609,19 @@ def reorder_environments() -> Response:
     return jsonify({'success': True})
 
 
+@app.route('/api/test-cases/reorder', methods=['PUT'])
+def reorder_test_cases() -> Response:
+    """批量更新测试用例排序"""
+    data: Dict[str, Any] = request.json or {}
+    ids: List[int] = data.get('ids', [])
+    for idx, item_id in enumerate(ids):
+        tc: Optional[TestCase] = TestCase.query.get(item_id)
+        if tc:
+            tc.sort_order = idx
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 # ==================== API对比 ====================
 
 @app.route('/api/diff', methods=['POST'])
@@ -650,6 +793,7 @@ def init_db() -> None:
         _ensure_column('api_groups', 'sort_order', 'INT DEFAULT 0 COMMENT \'排序序号\'')
         _ensure_column('api_configs', 'sort_order', 'INT DEFAULT 0 COMMENT \'排序序号\'')
         _ensure_column('environments', 'sort_order', 'INT DEFAULT 0 COMMENT \'排序序号\'')
+        _ensure_column('test_cases', 'sort_order', 'INT DEFAULT 0 COMMENT \'排序序号\'')
 
 
 def _ensure_column(table: str, col_name: str, col_def: str) -> None:

@@ -2,13 +2,16 @@
  * OpenAPI导入模块
  */
 import { openModal, closeModal } from './modal.js';
-import { loadApis, loadApisForDiff } from './api.js';
+import { loadFolders } from './folder.js';
+import { loadApisForDiff } from './api.js';
 
 /**
  * 打开导入弹窗
+ * @param {number} [folderId] - 目标目录ID
  */
-export function openImportModal() {
-    if (!window.currentGroupId) return alert('请先选择分组');
+export function openImportModal(folderId) {
+    if (!folderId && !window.currentFolderId) return alert('请先选择目录');
+    window.importTargetFolderId = folderId || window.currentFolderId;
     document.getElementById('importJsonContent').value = '';
     document.getElementById('importFileInput').value = '';
     openModal('importApiModal');
@@ -32,7 +35,8 @@ export function handleImportFile(event) {
  * 导入OpenAPI
  */
 export async function importOpenAPI() {
-    if (!window.currentGroupId) return alert('请先选择分组');
+    const targetFolderId = window.importTargetFolderId || window.currentFolderId;
+    if (!targetFolderId) return alert('请先选择目录');
 
     const jsonText = document.getElementById('importJsonContent').value.trim();
     if (!jsonText) return alert('请输入或粘贴OpenAPI JSON内容');
@@ -49,7 +53,7 @@ export async function importOpenAPI() {
     }
 
     try {
-        const res = await fetch('/api/groups/' + window.currentGroupId + '/import-openapi', {
+        const res = await fetch('/api/folders/' + targetFolderId + '/import-openapi', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ spec: specObj })
@@ -59,7 +63,7 @@ export async function importOpenAPI() {
         if (result.success) {
             alert(result.message || '导入成功');
             closeModal('importApiModal');
-            loadApis(window.currentGroupId);
+            if (window.currentProjectId) loadFolders(window.currentProjectId);
             loadApisForDiff();
         } else {
             alert('导入失败: ' + (result.error || '未知错误'));

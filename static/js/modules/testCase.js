@@ -4,6 +4,7 @@
 import { esc } from './utils.js';
 import { setFieldValue, getFieldJsonValue } from './kvInput.js';
 import { renderDiffResult } from './diff.js';
+import { makeSortable } from './sortable.js';
 
 // 状态
 export const _testCaseCache = {};
@@ -11,12 +12,18 @@ export const _testCaseCache = {};
 /**
  * 加载测试用例
  * @param {number} apiId - API ID
- * @param {HTMLElement} apiEl - API元素
+ * @param {HTMLElement} [apiEl] - API元素（可选，不传则自动查找）
  */
 export async function loadTestCases(apiId, apiEl) {
     try {
         const res = await fetch('/api/apis/' + apiId + '/test-cases');
         const cases = await res.json();
+
+        // 如果未传入 apiEl，尝试通过 apiId 查找
+        if (!apiEl) {
+            apiEl = document.querySelector(`[data-api-id="${apiId}"]`);
+        }
+        if (!apiEl) return;
 
         const tcContainer = apiEl.querySelector('.test-case-list');
         if (!tcContainer) return;
@@ -38,6 +45,10 @@ export async function loadTestCases(apiId, apiEl) {
                 <button class="tc-delete" onclick="event.stopPropagation();deleteTestCase(${tc.id}, this)" title="删除">🗑️</button>
             </div>
         `).join('');
+        
+        // 初始化用例的拖拽排序 - 注意：这里要重新初始化整个容器
+        makeSortable(tcContainer, 'testCases');
+        
     } catch(e) {
         console.warn('加载用例失败:', e);
     }
@@ -46,8 +57,10 @@ export async function loadTestCases(apiId, apiEl) {
 /**
  * 展开/收起测试用例列表
  * @param {HTMLElement} cardEl - API卡片元素
+ * @param {Event} [event] - 点击事件
  */
-export function toggleTestCases(cardEl) {
+export function toggleTestCases(cardEl, event) {
+    if (event) event.stopPropagation();
     const tcContainer = cardEl.querySelector('.test-case-list');
     const arrow = cardEl.querySelector('.tc-toggle');
     if (!tcContainer || !arrow) return;
@@ -55,8 +68,8 @@ export function toggleTestCases(cardEl) {
     tcContainer.style.display = isHidden ? 'block' : 'none';
     arrow.textContent = isHidden ? '▼' : '▶';
     if (isHidden && tcContainer.children.length === 0) {
-        const apiId = parseInt(cardEl.id.replace('api-', '')) || 0;
-        loadTestCases(apiId, cardEl);
+        const apiId = parseInt(cardEl.dataset.apiId) || 0;
+        if (apiId) loadTestCases(apiId, cardEl);
     }
 }
 
@@ -79,8 +92,15 @@ export function applyTestCase(tc) {
 
     document.getElementById('diffApiSelect').value = tc.api_id || document.getElementById('diffApiSelect').value;
 
-    if (tc.env1_id) document.getElementById('env1Select').value = tc.env1_id;
-    if (tc.env2_id) document.getElementById('env2Select').value = tc.env2_id;
+    // 先设置环境选择，然后触发变更以更新URL
+    if (tc.env1_id) {
+        document.getElementById('env1Select').value = tc.env1_id;
+        onEnvChange(1);
+    }
+    if (tc.env2_id) {
+        document.getElementById('env2Select').value = tc.env2_id;
+        onEnvChange(2);
+    }
 
     document.getElementById('url1').value = tc.url1 || '';
     document.getElementById('url2').value = tc.url2 || '';

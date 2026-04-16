@@ -6,7 +6,7 @@
     <title>API Diff Tool</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body onclick="closeAllDropdowns()">
     <div class="container">
         <div class="header">
             <h1>API Diff Tool - 接口差异对比工具</h1>
@@ -19,29 +19,8 @@
                     <div class="panel-title flex">
                         <span class="flex-1">项目管理</span>
                         <div style="display:flex;gap:4px;align-items:center;">
-                            <div class="sort-dropdown">
-                                <button class="sort-btn" title="排序">⇅</button>
-                                <div class="sort-menu">
-                                    <div onclick="onSortChange('projects', 'default')">默认排序</div>
-                                    <div onclick="onSortChange('projects', 'name_asc')">名称 A→Z</div>
-                                    <div onclick="onSortChange('projects', 'name_desc')">名称 Z→A</div>
-                                    <div onclick="onSortChange('projects', 'time_desc')">最新优先</div>
-                                    <div onclick="onSortChange('projects', 'time_asc')">最早优先</div>
-                                </div>
-                            </div>
-                            <button class="btn-add" id="varManageBtn" onclick="openVariableModal()" style="display:none" title="变量管理">{ }</button>
-                            <button class="btn-add" onclick="openProjectModal()" title="新建项目">+</button>
-                        </div>
-                    </div>
-                    <div id="projectList" class="sortable-list"><div class="empty-tip">暂无项目</div></div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title flex">
-                        <span class="flex-1">环境管理</span>
-                        <div style="display:flex;gap:4px;align-items:center;">
-                            <div class="sort-dropdown">
-                                <button class="sort-btn" title="排序">⇅</button>
+                            <div class="sort-dropdown" >
+                                <button class="sort-btn" title="排序" hidden>⇅</button>
                                 <div class="sort-menu">
                                     <div onclick="onSortChange('environments', 'default')">默认排序</div>
                                     <div onclick="onSortChange('environments', 'name_asc')">名称 A→Z</div>
@@ -50,51 +29,34 @@
                                     <div onclick="onSortChange('environments', 'time_asc')">最早优先</div>
                                 </div>
                             </div>
-                            <button class="btn-add" id="addEnvBtn" onclick="openEnvModal()" title="新建环境">+</button>
+                            <button class="btn-add" id="varManageBtn" onclick="openVariableModal()" style="display:none" title="变量管理">{ }</button>
+                            <button class="btn-add" id="envManageBtn" onclick="openEnvManageModal()" style="display:none" title="环境管理">&#127760;</button>
+                            <button class="btn-add" onclick="openProjectModal()" title="新建项目">+</button>
                         </div>
                     </div>
-                    <div id="envList" class="sortable-list"><div class="empty-tip">请先选择项目</div></div>
+                    <div id="projectList" class="sortable-list"><div class="empty-tip">暂无项目</div></div>
                 </div>
 
                 <div class="panel">
                     <div class="panel-title flex">
-                        <span class="flex-1">分组管理</span>
+                        <span class="flex-1">目录管理</span>
                         <div style="display:flex;gap:4px;align-items:center;">
                             <div class="sort-dropdown">
-                                <button class="sort-btn" title="排序">⇅</button>
+                                <button class="sort-btn" title="排序" hidden>⇅</button>
                                 <div class="sort-menu">
-                                    <div onclick="onSortChange('groups', 'default')">默认排序</div>
-                                    <div onclick="onSortChange('groups', 'name_asc')">名称 A→Z</div>
-                                    <div onclick="onSortChange('groups', 'name_desc')">名称 Z→A</div>
-                                    <div onclick="onSortChange('groups', 'time_desc')">最新优先</div>
-                                    <div onclick="onSortChange('groups', 'time_asc')">最早优先</div>
+                                    <div onclick="onSortChange('folders', 'default')">默认排序</div>
+                                    <div onclick="onSortChange('folders', 'name_asc')">名称 A→Z</div>
+                                    <div onclick="onSortChange('folders', 'name_desc')">名称 Z→A</div>
+                                    <div onclick="onSortChange('folders', 'time_desc')">最新优先</div>
+                                    <div onclick="onSortChange('folders', 'time_asc')">最早优先</div>
                                 </div>
                             </div>
-                            <button class="btn-add" id="addGroupBtn" onclick="openGroupModal()" style="display:none" title="新建分组">+</button>
+                            <button class="btn-add" id="addFolderBtn" onclick="openFolderModal()" style="display:none" title="新建目录">+</button>
+                            <button class="btn-add" id="addApiBtn" onclick="openApiModal()" style="display:none" title="新建API">+</button>
                             <button class="btn-add" id="importApiBtn" onclick="openImportModal()" style="display:none" title="导入OpenAPI">⬇</button>
                         </div>
                     </div>
-                    <div id="groupList" class="sortable-list"><div class="empty-tip">请先选择项目</div></div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title flex">
-                        <span class="flex-1">API列表</span>
-                        <div style="display:flex;gap:4px;align-items:center;">
-                            <div class="sort-dropdown">
-                                <button class="sort-btn" title="排序">⇅</button>
-                                <div class="sort-menu">
-                                    <div onclick="onSortChange('apis', 'default')">默认排序</div>
-                                    <div onclick="onSortChange('apis', 'name_asc')">名称 A→Z</div>
-                                    <div onclick="onSortChange('apis', 'name_desc')">名称 Z→A</div>
-                                    <div onclick="onSortChange('apis', 'time_desc')">最新优先</div>
-                                    <div onclick="onSortChange('apis', 'time_asc')">最早优先</div>
-                                </div>
-                            </div>
-                            <button class="btn-add" id="addApiBtn" onclick="openApiModal()" style="display:none" title="新建API">+</button>
-                        </div>
-                    </div>
-                    <div id="apiList" class="sortable-list"><div class="empty-tip">请先选择分组</div></div>
+                    <div id="folderTree" class="folder-tree"><div class="empty-tip">请先选择项目</div></div>
                 </div>
             </div>
 
@@ -136,7 +98,7 @@
                                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers1')" style="margin-top: 5px;">+ 添加</button>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers1')" style="margin-top: 5px;"> + </button>
                                 </div>
                                 <textarea id="headers1" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
                             </div>
@@ -154,7 +116,7 @@
                                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body1')" style="margin-top: 5px;">+ 添加</button>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body1')" style="margin-top: 5px;"> + </button>
                                 </div>
                                 <textarea id="body1" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
                             </div>
@@ -183,7 +145,7 @@
                                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers2')" style="margin-top: 5px;">+ 添加</button>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers2')" style="margin-top: 5px;"> + </button>
                                 </div>
                                 <textarea id="headers2" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
                             </div>
@@ -201,7 +163,7 @@
                                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body2')" style="margin-top: 5px;">+ 添加</button>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body2')" style="margin-top: 5px;"> + </button>
                                 </div>
                                 <textarea id="body2" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
                             </div>
@@ -279,7 +241,7 @@
                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('envDefaultHeaders')" style="margin-top:5px;">+ 添加</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('envDefaultHeaders')" style="margin-top:5px;"> + </button>
                 </div>
                 <textarea id="envDefaultHeaders" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
             </div>
@@ -297,7 +259,7 @@
                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('envDefaultBody')" style="margin-top:5px;">+ 添加</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('envDefaultBody')" style="margin-top:5px;"> + </button>
                 </div>
                 <textarea id="envDefaultBody" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
             </div>
@@ -312,22 +274,104 @@
         </div>
     </div>
 
-    <!-- ========== 分组弹窗 ========== -->
-    <div id="groupModal" class="modal-overlay">
+    <!-- ========== 环境管理弹窗（新） ========== -->
+    <div id="envManageModal" class="modal-overlay">
+        <div class="modal-box" style="width:700px;max-height:80vh;">
+            <div class="modal-header">
+                <h3>环境管理</h3>
+                <button class="modal-close" onclick="closeModal('envManageModal')" title="关闭">×</button>
+            </div>
+            <div class="env-manage-container">
+                <div class="env-list-panel">
+                    <div class="env-list-header">
+                        <span>环境列表</span>
+                    </div>
+                    <div id="envManageList" class="env-list"></div>
+                    <div class="env-list-footer">
+                        <button class="btn-add" onclick="selectEnvForEdit(null)" title="新增环境">+</button>
+                    </div>
+                </div>
+                <div class="env-edit-panel">
+                    <div class="env-edit-header" id="envEditHeader">新增环境</div>
+                    <div id="envEditForm" class="env-edit-form">
+                        <input type="hidden" id="manageEditEnvId" value="">
+                        <div class="form-group">
+                            <label>环境名称</label>
+                            <input type="text" id="manageEnvName" placeholder="例如: dev / test / prod">
+                        </div>
+                        <div class="form-group">
+                            <label>基础URL (Base URL)</label>
+                            <input type="text" id="manageEnvBaseUrl" placeholder="http://localhost:8080">
+                        </div>
+                        <!-- 默认请求头 -->
+                        <div class="form-group">
+                            <div class="flex" style="justify-content:space-between;margin-bottom:5px;">
+                                <label>默认请求头</label>
+                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('manageEnvDefaultHeaders')" title="切换风格">⇄</button>
+                            </div>
+                            <div id="manageEnvDefaultHeaders-kv-container" class="kv-container">
+                                <div class="kv-list" id="manageEnvDefaultHeaders-kv-list">
+                                    <div class="kv-row">
+                                        <input type="text" placeholder="key" class="kv-key">
+                                        <input type="text" placeholder="value" class="kv-value">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('manageEnvDefaultHeaders')" style="margin-top:5px;"> + </button>
+                            </div>
+                            <textarea id="manageEnvDefaultHeaders" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
+                        </div>
+                        <!-- 默认请求体 -->
+                        <div class="form-group">
+                            <div class="flex" style="justify-content:space-between;margin-bottom:5px;">
+                                <label>默认请求体</label>
+                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('manageEnvDefaultBody')" title="切换风格">⇄</button>
+                            </div>
+                            <div id="manageEnvDefaultBody-kv-container" class="kv-container hidden">
+                                <div class="kv-list" id="manageEnvDefaultBody-kv-list">
+                                    <div class="kv-row">
+                                        <input type="text" placeholder="key" class="kv-key">
+                                        <input type="text" placeholder="value" class="kv-value">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('manageEnvDefaultBody')" style="margin-top:5px;"> + </button>
+                            </div>
+                            <textarea id="manageEnvDefaultBody" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>描述</label>
+                            <textarea id="manageEnvDesc"></textarea>
+                        </div>
+                        <div class="flex" style="margin-top:10px;">
+                            <button class="btn btn-primary" onclick="saveEnvFromManage()">保存</button>
+                            <button class="btn btn-danger" id="deleteEnvBtn" onclick="deleteEnvFromManage()" style="display:none;">删除</button>
+                            <button class="btn btn-default" onclick="closeModal('envManageModal')">取消</button>
+                        </div>
+                    </div>
+                    <div id="envEditEmpty" class="env-edit-empty">请选择或新增环境</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 目录弹窗 ========== -->
+    <div id="folderModal" class="modal-overlay">
         <div class="modal-box">
-            <h3 id="groupModalTitle">新建分组</h3>
-            <input type="hidden" id="editGroupId" value="">
+            <h3 id="folderModalTitle">新建目录</h3>
+            <input type="hidden" id="editFolderId" value="">
+            <input type="hidden" id="folderParentId" value="">
             <div class="form-group">
-                <label>分组名称</label>
-                <input type="text" id="groupName">
+                <label>目录名称</label>
+                <input type="text" id="folderName">
             </div>
             <div class="form-group">
                 <label>描述</label>
-                <textarea id="groupDesc"></textarea>
+                <textarea id="folderDesc"></textarea>
             </div>
             <div class="flex">
-                <button class="btn btn-primary" onclick="saveGroup()">保存</button>
-                <button class="btn btn-default" onclick="closeModal('groupModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveFolder()">保存</button>
+                <button class="btn btn-default" onclick="closeModal('folderModal')">取消</button>
             </div>
         </div>
     </div>
@@ -337,6 +381,7 @@
         <div class="modal-box" style="width:500px;">
             <h3 id="apiModalTitle">新建API</h3>
             <input type="hidden" id="editApiId" value="">
+            <input type="hidden" id="apiFolderId" value="">
             <div class="form-group">
                 <label>API名称</label>
                 <input type="text" id="apiName" placeholder="例如: 用户登录接口">
@@ -368,7 +413,7 @@
                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('apiHeaders')" style="margin-top: 5px;">+ 添加</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('apiHeaders')" style="margin-top: 5px;"> + </button>
                 </div>
                 <textarea id="apiHeaders" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
             </div>
@@ -386,7 +431,7 @@
                             <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('apiBody')" style="margin-top: 5px;">+ 添加</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('apiBody')" style="margin-top: 5px;"> + </button>
                 </div>
                 <textarea id="apiBody" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
             </div>

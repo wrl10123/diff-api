@@ -4,18 +4,35 @@
  */
 
 // 导入各功能模块
-import { initModals } from './modules/modal.js';
+import { initModals, closeModal } from './modules/modal.js';
 import { initResizer } from './modules/resizer.js';
 import { loadProjects, currentProjectId } from './modules/project.js';
-import { loadEnvironments, envDataCache } from './modules/environment.js';
-import { loadGroups } from './modules/group.js';
-import { loadApis, loadApisForDiff } from './modules/api.js';
+import { openEnvManageModal, selectEnvForEdit, saveEnvFromManage, deleteEnvFromManage, onEnvChange } from './modules/environment.js';
+import { loadFolders, openFolderModal, saveFolder, deleteFolder, toggleFolder, toggleFolderMenu } from './modules/folder.js';
+import { loadApisForDiff, openApiModal, saveApi, deleteApi, selectApiForDiff } from './modules/api.js';
 import { loadVariables } from './modules/variable.js';
+import { loadTestCases, toggleTestCases } from './modules/testCase.js';
 import { toggleInputMode, addKvRow, getFieldJsonValue, setFieldJsonValue } from './modules/kvInput.js';
 
 // 将必要函数暴露到window，供HTML内联事件使用
 window.toggleInputMode = toggleInputMode;
 window.addKvRow = addKvRow;
+window.closeModal = closeModal;
+window.openFolderModal = openFolderModal;
+window.saveFolder = saveFolder;
+window.deleteFolder = deleteFolder;
+window.toggleFolder = toggleFolder;
+window.openApiModal = openApiModal;
+window.saveApi = saveApi;
+window.deleteApi = deleteApi;
+window.selectApiForDiff = selectApiForDiff;
+window.toggleTestCases = toggleTestCases;
+window.loadTestCases = loadTestCases;
+window.openEnvManageModal = openEnvManageModal;
+window.selectEnvForEdit = selectEnvForEdit;
+window.saveEnvFromManage = saveEnvFromManage;
+window.deleteEnvFromManage = deleteEnvFromManage;
+window.onEnvChange = onEnvChange;
 
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {

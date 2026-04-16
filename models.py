@@ -25,19 +25,22 @@ class Project(db.Model):
 
 
 class ApiGroup(db.Model):
-    """API分组表"""
+    """API目录表（支持嵌套）"""
     __tablename__ = 'api_groups'
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False, comment='项目ID')
-    name = db.Column(db.String(100), nullable=False, comment='分组名称')
-    description = db.Column(db.String(500), comment='分组描述')
+    parent_id = db.Column(db.Integer, db.ForeignKey('api_groups.id'), nullable=True, comment='父目录ID')
+    name = db.Column(db.String(100), nullable=False, comment='目录名称')
+    description = db.Column(db.String(500), comment='目录描述')
     sort_order = db.Column(db.Integer, default=0, comment='排序序号')
+    is_expanded = db.Column(db.Boolean, default=True, comment='是否展开')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
 
     # 关联
     apis = db.relationship('ApiConfig', backref='group', lazy='dynamic', cascade='all, delete-orphan')
+    children = db.relationship('ApiGroup', backref=db.backref('parent', remote_side=[id]), lazy='dynamic', cascade='all, delete-orphan')
 
 
 class ApiConfig(db.Model):
@@ -104,6 +107,7 @@ class TestCase(db.Model):
     body1 = db.Column(db.Text, comment='环境1请求体(JSON字符串)')
     body2 = db.Column(db.Text, comment='环境2请求体(JSON字符串)')
     diff_result = db.Column(db.Text, comment='最近一次对比结果(JSON,截取前2000字符)')
+    sort_order = db.Column(db.Integer, default=0, comment='排序序号')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
 

@@ -4,14 +4,13 @@
 import { esc } from './utils.js';
 import { openModal, closeModal } from './modal.js';
 import { makeSortable } from './sortable.js';
-import { loadEnvironments, refreshEnvSelects } from './environment.js';
-import { loadGroups } from './group.js';
+import { loadFolders } from './folder.js';
 import { loadApisForDiff } from './api.js';
 import { loadVariables } from './variable.js';
 
 // 状态
 export let currentProjectId = null;
-export const sortState = { projects: 'default', environments: 'default', groups: 'default', apis: 'default' };
+export const sortState = { projects: 'default', environments: 'default', folders: 'default', apis: 'default' };
 
 /**
  * 打开项目弹窗
@@ -87,16 +86,45 @@ export async function selectProject(projectId) {
     document.querySelectorAll('#projectList .tree-item').forEach(el => el.classList.remove('active'));
     const el = document.getElementById('project-' + projectId);
     if (el) el.classList.add('active');
-    document.getElementById('addGroupBtn').style.display = 'inline-block';
-    document.getElementById('varManageBtn').style.display = 'inline-block';
-    document.getElementById('addApiBtn').style.display = 'none';
-    document.getElementById('apiList').innerHTML = '<div class="empty-tip">请先选择分组</div>';
+    const addFolderBtn = document.getElementById('addFolderBtn');
+    if (addFolderBtn) addFolderBtn.style.display = 'inline-block';
+    const varManageBtn = document.getElementById('varManageBtn');
+    if (varManageBtn) varManageBtn.style.display = 'inline-block';
+    const envManageBtn = document.getElementById('envManageBtn');
+    if (envManageBtn) envManageBtn.style.display = 'inline-block';
+    const addApiBtn = document.getElementById('addApiBtn');
+    if (addApiBtn) addApiBtn.style.display = 'none';
+    
+    // 先加载环境数据，确保下拉框有选项
+    await loadEnvironmentsForProject(projectId);
+    
     await Promise.all([
-        loadEnvironments(projectId),
-        loadGroups(projectId),
+        loadFolders(projectId),
         loadApisForDiff(),
         loadVariables(projectId)
     ]);
+}
+
+/**
+ * 加载项目的环境数据
+ * @param {number} projectId - 项目ID
+ */
+async function loadEnvironmentsForProject(projectId) {
+    try {
+        const res = await fetch('/api/projects/' + projectId + '/environments');
+        const envData = await res.json();
+        // 更新环境缓存
+        const { envDataCache } = await import('./environment.js');
+        envDataCache.length = 0;
+        envDataCache.push(...envData);
+        window.envDataCache = envDataCache;
+        
+        // 刷新下拉框
+        const { refreshEnvSelects } = await import('./environment.js');
+        refreshEnvSelects();
+    } catch (e) {
+        console.warn('加载环境失败:', e);
+    }
 }
 
 /**
@@ -108,12 +136,11 @@ export async function deleteProject(id) {
     await fetch('/api/projects/' + id, { method: 'DELETE' });
     currentProjectId = null;
     window.currentGroupId = null;
-    document.getElementById('groupList').innerHTML = '<div class="empty-tip">请先选择项目</div>';
-    document.getElementById('apiList').innerHTML = '<div class="empty-tip">请先选择分组</div>';
-    document.getElementById('envList').innerHTML = '<div class="empty-tip">请先选择项目</div>';
-    document.getElementById('addGroupBtn').style.display = 'none';
+    document.getElementById('folderTree').innerHTML = '<div class="empty-tip">请先选择项目</div>';
     document.getElementById('varManageBtn').style.display = 'none';
+    document.getElementById('envManageBtn').style.display = 'none';
     document.getElementById('addApiBtn').style.display = 'none';
+    document.getElementById('importApiBtn').style.display = 'none';
     loadProjects();
 }
 
@@ -127,13 +154,9 @@ export function onSortChange(listType, value) {
     switch (listType) {
         case 'projects': loadProjects(); break;
         case 'environments': if (currentProjectId) loadEnvironments(currentProjectId); break;
-        case 'groups': if (currentProjectId) loadGroups(currentProjectId); break;
-        case 'apis': if (window.currentGroupId) loadApis(window.currentGroupId); break;
+        case 'folders': if (currentProjectId) loadFolders(currentProjectId); break;
     }
 }
-
-// 导入loadApis用于onSortChange
-import { loadApis } from './api.js';
 
 // 暴露到window供HTML内联事件使用
 window.openProjectModal = openProjectModal;

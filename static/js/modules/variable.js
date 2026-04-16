@@ -102,9 +102,13 @@ export async function saveVariable() {
     const name = document.getElementById('varName').value.trim();
     if (!name) return alert('请输入变量名');
     
+    // 去掉变量值末尾的换行和空格
+    const rawValue = document.getElementById('varValue').value;
+    const value = rawValue.replace(/[\s\n\r]+$/, '');
+    
     const payload = {
         name,
-        value: document.getElementById('varValue').value,
+        value,
         description: document.getElementById('varDesc').value.trim()
     };
     
@@ -131,7 +135,7 @@ export async function saveVariable() {
                 document.getElementById('deleteVarBtn').style.display = 'inline-block';
             }
             renderVariableList();
-            alert('保存成功');
+            // 静默保存，不弹提示
         } else {
             alert('保存失败: ' + (result.error || '未知错误'));
         }
@@ -141,12 +145,11 @@ export async function saveVariable() {
 }
 
 /**
- * 取消变量编辑
+ * 取消变量编辑 - 关闭变量管理弹窗
  */
 export function cancelVariableEdit() {
     currentVariableId = null;
-    showVariableEditForm(false);
-    renderVariableList();
+    closeModal('variableModal');
 }
 
 /**
