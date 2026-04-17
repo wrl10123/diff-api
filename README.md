@@ -1,57 +1,95 @@
-# DiffAPI - 接口差异对比工具
+# DiffAPI - API对比工具
 
-基于 Flask 的 Web 应用，用于对比同一接口在不同环境（开发/测试/生产）下的 JSON 响应差异。支持左右并排视图、字段级高亮、OpenAPI 导入、拖拽排序等功能。
+基于 Flask 的 Web 应用，用于对比同一接口在不同环境（开发/测试/生产）下的 JSON 响应差异。支持左右并排视图、字段级高亮、OpenAPI/Postman 导入、拖拽排序等功能。
 
 ## 功能特性
 
 - **多环境对比** — 向两个环境发送相同请求，深度比较响应差异
-- **可视化 Diff 视图** — 左右并排展示原始 JSON，仅对差异行着色背景色：
-  - 红色 (`sbd-del`)：该侧独有字段或值不同的字段
-  - 黄绿色 (`sbd-mod`)：两侧值不一致的字段
-- **项目管理** — 创建项目，管理分组、接口配置、环境地址
-- **OpenAPI/Swagger 导入** — 支持 OpenAPI 2.0/3.x 规范批量导入接口
-- **拖拽排序** — 项目、分组、接口、环境均支持拖拽重排
-- **对比历史** — 保存最近 20 条对比记录，支持回溯查看
-- **请求自定义** — 支持任意 HTTP 方法、自定义 Headers 和 Body（JSON/Key-Value 双模式）
-- **自动建表** — 启动时自动检测并创建缺失表和字段
+- **可视化 Diff 视图** — 左右并排展示原始 JSON，差异行着色：
+  - 红色：仅左侧有
+  - 蓝色：仅右侧有
+  - 黄绿色：值不一致
+- **项目管理** — 支持多级目录、接口配置、环境地址管理
+- **导入功能** — 支持 OpenAPI/Swagger 2.0/3.x 和 Postman Collection 导入
+- **拖拽排序** — 基于 SortableJS，支持项目、目录、接口、环境拖拽重排
+- **测试用例** — 保存对比参数，支持快速回放
+- **变量系统** — 支持 `{{变量名}}` 占位符自动替换
+- **URL参数展示** — 自动解析并展示 Query Params，支持一键复制完整URL
 
 ## 技术栈
 
 | 层 | 技术 |
 |---|------|
-| 后端框架 | Python Flask >= 2.3.0 |
-| ORM | Flask-SQLAlchemy >= 3.0.0 |
+| 后端框架 | Python Flask 2.3+ |
+| ORM | Flask-SQLAlchemy 3.0+ |
+| 数据库迁移 | Flask-Migrate |
 | 数据库 | MySQL (utf8mb4) |
-| 数据库驱动 | PyMySQL >= 1.1.0 |
-| HTTP 客户端 | requests >= 2.31.0 |
-| 前端 | 原生 HTML + CSS + JavaScript（无框架依赖） |
+| HTTP 客户端 | requests |
+| 前端拖拽 | SortableJS |
+| 前端 | 原生 ES6 模块化 |
 
 ## 项目结构
 
 ```
 diffapi/
-├── app.py                  # Flask 主应用（路由、配置、数据库初始化）
-├── models.py               # SQLAlchemy 数据模型（5 张表）
-├── diff_service.py         # 核心引擎：HTTP 请求 + 深度 JSON 对比
-├── init_db.py              # 独立数据库初始化脚本
-├── requirements.txt        # Python 依赖
+├── app.py                 # Flask 主入口
+├── config.py              # 配置管理（环境变量）
+├── models.py              # SQLAlchemy 数据模型
+├── diff_service.py        # API对比服务
+├── import_service.py      # 导入服务入口
+├── utils.py               # 工具函数
+├── logger.py              # 日志配置
+├── migrations.py          # 数据库迁移模块
+├── requirements.txt       # Python 依赖
 │
-├── database/               # 数据库迁移脚本
-│   ├── schema.sql          # 当前完整表结构（全新部署用）
-│   ├── 001_init.sql        # v1.0 初始建表
-│   ├── 002_add_sort_order.sql  # v1.1 排序字段迁移
-│   └── README.md           # 迁移文档与表关系图
+├── routes/                # 路由模块
+│   ├── __init__.py        # Blueprint 注册
+│   ├── projects.py        # 项目管理
+│   ├── folders.py         # 目录管理
+│   ├── apis.py            # API管理
+│   ├── environments.py    # 环境管理
+│   ├── test_cases.py      # 测试用例
+│   ├── variables.py       # 变量管理
+│   ├── diff.py            # 对比执行
+│   ├── import_routes.py   # 导入路由
+│   └── error_log.py       # 错误日志
+│
+├── services/              # 服务模块
+│   ├── __init__.py
+│   ├── openapi_import.py  # OpenAPI导入
+│   └── postman_import.py  # Postman导入
 │
 ├── templates/
-│   └── index.html          # 单页应用模板
+│   └── index.html         # 单页应用模板
 │
 ├── static/
-│   ├── css/style.css       # 样式表
-│   └── js/app.js           # 前端逻辑（Diff 渲染、交互等）
+│   ├── css/
+│   │   └── style.css      # 样式表
+│   └── js/
+│       ├── app.js         # 主入口
+│       └── modules/       # ES6模块
+│           ├── state.js       # 状态管理
+│           ├── events.js      # 事件委托
+│           ├── errorHandler.js# 错误处理
+│           ├── project.js     # 项目管理
+│           ├── folder.js      # 目录管理
+│           ├── api.js         # API管理
+│           ├── environment.js # 环境管理
+│           ├── testCase.js    # 测试用例
+│           ├── variable.js    # 变量管理
+│           ├── diff.js        # 对比功能
+│           ├── sortable.js    # 拖拽排序
+│           ├── import.js      # 导入功能
+│           ├── kvInput.js     # KV输入
+│           ├── modal.js       # 弹窗管理
+│           └── utils.js       # 工具函数
 │
-└── other/                  # 辅助脚本（非核心）
-    ├── t1.py               # DeepDiff 原型
-    ├── m.py / m1.py        # Mock 数据生成器
+├── database/              # 数据库相关
+│   └── migrations/        # 迁移脚本
+│
+├── .env                   # 环境配置（不提交）
+├── .env.example           # 环境配置模板
+└── tsconfig.json          # TypeScript配置（可选）
 ```
 
 ## 快速开始
@@ -62,21 +100,25 @@ diffapi/
 pip install -r requirements.txt
 ```
 
-### 2. 配置数据库
+### 2. 配置环境变量
 
-在 `app.py` 中修改数据库连接字符串：
-
-```python
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://用户名:密码@主机:端口/diffapi?charset=utf8mb4'
-```
-
-或使用 `init_db.py` 脚本创建数据库：
+复制 `.env.example` 为 `.env`，修改配置：
 
 ```bash
-python init_db.py
+cp .env.example .env
 ```
 
-> 首次启动时应用会自动执行 `db.create_all()` 创建缺失的表。
+编辑 `.env`：
+
+```ini
+FLASK_ENV=development
+SECRET_KEY=your-secret-key
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your-password
+DB_NAME=diffapi
+```
 
 ### 3. 启动服务
 
@@ -88,12 +130,66 @@ python app.py
 
 ## 使用流程
 
-1. **创建项目** — 点击「新建项目」输入项目名称
-2. **添加环境** — 在项目下添加环境（如 dev、test、prod），填写各环境的 Base URL
-3. **创建分组** — 在项目下创建接口分组
-4. **配置接口** — 在分组中添加接口，设置请求路径、方法、Headers、Body
-5. **执行对比** — 选择两个环境，点击「开始对比」，查看差异结果
-6. **导入接口**（可选）— 通过 OpenAPI/Swagger JSON 批量导入接口定义
+1. **创建项目** — 点击「+」新建项目
+2. **配置环境** — 点击「🌐」添加环境（dev/test/prod），填写 Base URL
+3. **创建目录** — 点击「+」创建接口目录（支持多级）
+4. **添加接口** — 在目录下添加接口，设置路径、方法、Headers、Body
+5. **执行对比** — 选择API和两个环境，点击「执行对比」
+6. **保存用例** — 点击「保存用例」保存当前对比配置
+7. **导入接口** — 点击「⬇」支持 OpenAPI/Postman 批量导入
+
+## API 接口
+
+### 项目管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/projects` | 获取项目列表 |
+| POST | `/api/projects` | 创建项目 |
+| PUT | `/api/projects/<id>` | 更新项目 |
+| DELETE | `/api/projects/<id>` | 删除项目 |
+
+### 目录管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/projects/<pid>/folders` | 获取目录树 |
+| POST | `/api/projects/<pid>/folders` | 创建目录 |
+| PUT | `/api/folders/<id>` | 更新目录 |
+| DELETE | `/api/folders/<id>` | 删除目录 |
+
+### API管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/folders/<fid>/apis` | 获取API列表 |
+| POST | `/api/folders/<fid>/apis` | 创建API |
+| GET | `/api/apis/<id>` | 获取API详情 |
+| PUT | `/api/apis/<id>` | 更新API |
+| DELETE | `/api/apis/<id>` | 删除API |
+
+### 环境管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/projects/<pid>/environments` | 获取环境列表 |
+| POST | `/api/projects/<pid>/environments` | 创建环境 |
+| PUT | `/api/environments/<id>` | 更新环境 |
+| DELETE | `/api/environments/<id>` | 删除环境 |
+
+### 导入功能
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/folders/<fid>/import-openapi` | 导入OpenAPI |
+| POST | `/api/folders/<fid>/import-postman` | 导入Postman |
+
+### 对比功能
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/diff/execute` | 执行对比 |
+| GET | `/api/diff/history` | 获取对比历史 |
 
 ## 数据库设计
 
@@ -101,99 +197,56 @@ python app.py
 
 ```
 projects (项目)
-  ├── api_groups (分组)     [FK: project_id → CASCADE]
-  │    └── api_configs (接口) [FK: group_id → CASCADE]
-  │         └── diff_records (对比记录) [FK: api_id → CASCADE]
+  ├── api_groups (目录)      [FK: project_id]
+  │    ├── api_configs (API) [FK: group_id]
+  │    │    └── test_cases   [FK: api_id]
+  │    └── api_groups (子目录) [FK: parent_id]
   │
-  └── environments (环境)    [FK: project_id → CASCADE]
+  ├── environments (环境)    [FK: project_id]
+  └── variables (变量)       [FK: project_id]
 ```
 
-### 主要字段说明
+### 主要表字段
 
-| 表 | 关键字段 | 说明 |
-|----|---------|------|
-| `projects` | name, description, sort_order | 项目基本信息 |
-| `api_groups` | project_id, name, sort_order | 分组归属项目 |
-| `api_configs` | group_id, path, method, headers, body | 接口路径/方法/参数（headers/body 为 JSON 文本） |
-| `environments` | project_id, base_url, default_headers | 环境 URL 与默认头 |
-| `diff_records` | api_id, env1_url, env2_url, env1_response, env2_response, diff_result | 对比记录（响应文本截取前 2000 字符） |
+| 表 | 关键字段 |
+|----|---------|
+| `projects` | name, description, sort_order |
+| `api_groups` | project_id, parent_id, name, sort_order |
+| `api_configs` | group_id, path, query_params, method, headers, body |
+| `environments` | project_id, name, base_url, default_headers, default_body |
+| `test_cases` | api_id, name, env1_id, env2_id, url1, url2, headers1, headers2, body1, body2 |
+| `variables` | project_id, name, value |
 
-完整 DDL 见 `database/schema.sql`。
+## 安全特性
 
-## API 接口
+- 环境变量管理敏感配置（数据库密码、SECRET_KEY）
+- 输入验证和XSS防护
+- 安全的数据库迁移（白名单验证）
+- 前端错误边界和全局错误处理
 
-所有接口返回 JSON 格式，基础路径为 `/api`。
+## 开发命令
 
-### 项目管理
+```bash
+# 启动开发服务器
+python app.py
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/projects?sort=` | 获取项目列表（支持排序） |
-| POST | `/api/projects` | 创建项目 |
-| PUT | `/api/projects/<id>` | 更新项目 |
-| DELETE | `/api/projects/<id>` | 删除项目（级联删除） |
-| PUT | `/api/projects/reorder` | 批量排序 `{ids: [...]}` |
+# 数据库迁移
+flask db init        # 初始化迁移
+flask db migrate     # 生成迁移脚本
+flask db upgrade     # 应用迁移
 
-### 分组管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/projects/<pid>/groups` | 获取分组列表 |
-| POST | `/api/projects/<pid>/groups` | 创建分组 |
-| PUT | `/api/groups/<id>` | 更新分组 |
-| DELETE | `/api/groups/<id>` | 删除分组 |
-| POST | `/api/groups/<id>/import-openapi` | 导入 OpenAPI/Swagger |
-| PUT | `/api/groups/reorder` | 批量排序 |
-
-### 接口管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/groups/<gid>/apis` | 获取接口列表 |
-| POST | `/api/groups/<gid>/apis` | 创建接口 |
-| GET | `/api/apis/<id>` | 获取接口详情 |
-| PUT | `/api/apis/<id>` | 更新接口 |
-| DELETE | `/api/apis/<id>` | 删除接口 |
-| PUT | `/api/apis/reorder` | 批量排序 |
-
-### 环境管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/projects/<pid>/environments` | 获取环境列表 |
-| POST | `/api/projects/<pid/environments` | 创建环境 |
-| PUT | `/api/environments/<id>` | 更新环境 |
-| DELETE | `/api/environments/<id>` | 删除环境 |
-| PUT | `/api/environments/reorder` | 批量排序 |
-
-### 对比功能
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/diff` | 执行对比（传入两个环境 URL + 请求参数） |
-| GET | `/api/diff/records/<api_id>` | 获取某接口的对比历史（最近 20 条） |
-
-## Diff 引擎说明
-
-核心对比逻辑位于 `diff_service.py` 的 `DiffService` 类：
-
-- **HTTP 请求**：向两个目标 URL 发送相同方法/Headers/Body，超时 30 秒
-- **GET 特殊处理**：Body 参数转为 query string 传递
-- **深度对比**递归遍历 JSON 结构，检测：
-  - 类型变化（如 string → number）
-  - 新增字段（env2 有而 env1 无）
-  - 删除字段（env1 有而 env2 无）
-  - 值变更（记录前后值）
-  - 数组元素逐位比较
-- **前端渲染**：使用 `JSON.stringify(obj, null, 2)` 保持原始格式，通过路径匹配算法对差异行着色
+# 运行测试（待添加）
+pytest
+```
 
 ## 开发日志
 
 | 版本 | 日期 | 变更内容 |
 |------|------|----------|
-| v1.0 | - | 初始版本：项目管理、环境管理、接口 CRUD、Diff 对比、OpenAPI 导入 |
-| v1.1 | 2026-04-09 | 添加拖拽排序功能（sort_order 字段）、服务器端排序 |
-| v1.2 | - | Diff 结果优化：保留原始 JSON 格式、仅对差异行背景着色、同步滚动对比视图 |
+| v1.0 | - | 初始版本 |
+| v1.1 | 2026-04-09 | 添加拖拽排序功能 |
+| v1.2 | - | Diff 结果优化 |
+| v2.0 | 2026-04-17 | 大规模重构：模块化、配置分离、安全加固、SortableJS集成 |
 
 ## License
 
