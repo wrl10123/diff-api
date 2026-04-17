@@ -30,7 +30,7 @@ export async function executeDiff() {
     body2 = replaceVariablesDeep(body2);
 
     document.getElementById('diffResult').innerHTML = '<div class="loading">对比中...</div>';
-    const res = await fetch('/api/diff', {
+    const res = await fetch('/api/diff/execute', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({

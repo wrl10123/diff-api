@@ -62,7 +62,7 @@ export async function saveApi() {
     if (id) {
         await fetch('/api/apis/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     } else {
-        await fetch('/api/folders/' + folderId + '/apis', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        await fetch('/api/groups/' + folderId + '/apis', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     }
     closeModal('apiModal');
     if (currentProjectId) loadFolders(currentProjectId);
@@ -159,20 +159,40 @@ export function selectApiForDiff(apiId) {
         if (nameEl) {
             const apiPath = nameEl.dataset.path || '';
             const apiMethod = nameEl.dataset.method || 'POST';
+            const apiHeadersStr = nameEl.dataset.headers || '{}';
+            const apiBodyStr = nameEl.dataset.body || '{}';
+            
+            // 解析API的headers和body
             let apiHeaders = {};
             let apiBody = {};
-            try { apiHeaders = JSON.parse(stripJsonComments(nameEl.dataset.headers || '{}')); } catch(e) {}
-            try { apiBody = JSON.parse(stripJsonComments(nameEl.dataset.body || '{}')); } catch(e) {}
+            try { apiHeaders = JSON.parse(stripJsonComments(apiHeadersStr)); } catch(e) { apiHeaders = {}; }
+            try { apiBody = JSON.parse(stripJsonComments(apiBodyStr)); } catch(e) { apiBody = {}; }
             
             // 直接更新表单
             document.getElementById('method').value = apiMethod;
+            
+            // 更新环境1和环境2的headers和body
             for (const side of [1, 2]) {
-                const envHeaders = getFieldJsonValue('headers' + side);
+                // 获取当前环境的默认值
+                const envId = document.getElementById('env' + side + 'Select').value;
+                let envHeaders = {};
+                let envBody = {};
+                
+                if (envId && window.envDataCache) {
+                    const env = window.envDataCache.find(e => e.id == envId);
+                    if (env) {
+                        try { envHeaders = JSON.parse(env.default_headers || '{}'); } catch(e) { envHeaders = {}; }
+                        try { envBody = JSON.parse(env.default_body || '{}'); } catch(e) { envBody = {}; }
+                    }
+                }
+                
+                // 合并：环境默认值 + API特定值（API值优先）
                 const mergedHeaders = { ...envHeaders, ...apiHeaders };
+                const mergedBody = { ...envBody, ...apiBody };
+                
+                // 设置到表单
                 setFieldValue('headers' + side, mergedHeaders);
-                const envBody = getFieldJsonValue('body' + side);
-                const finalBody = Object.keys(apiBody).length > 0 ? apiBody : envBody;
-                setFieldValue('body' + side, finalBody);
+                setFieldValue('body' + side, mergedBody);
             }
             
             // 更新URL - 确保path被正确拼接

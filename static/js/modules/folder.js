@@ -6,6 +6,7 @@ import { openModal, closeModal } from './modal.js';
 import { currentProjectId, sortState } from './project.js';
 import { loadApisForDiff } from './api.js';
 import { makeSortable } from './sortable.js';
+import { openImportModal } from './openapi.js';
 
 // 目录展开状态缓存
 const folderExpandState = new Map();
@@ -63,7 +64,7 @@ export async function loadFolders(projectId) {
     const res = await fetch('/api/projects/' + projectId + '/folders' + sortParam);
     const tree = await res.json();
     const listEl = document.getElementById('folderTree');
-    listEl.innerHTML = renderFolderTree(tree);
+    listEl.innerHTML = renderFolderTree(tree, 0, true);
     
     // 初始化所有目录的拖拽排序（包括嵌套的）
     _initFolderSortable(listEl);
@@ -123,11 +124,16 @@ function _initTestCaseSortable(container) {
  * 渲染目录树
  * @param {Array} nodes - 目录节点数组
  * @param {number} level - 层级
+ * @param {boolean} isFirstBatch - 是否是第一批节点（用于控制默认展开）
  */
-function renderFolderTree(nodes, level = 0) {
+function renderFolderTree(nodes, level = 0, isFirstBatch = false) {
     if (!nodes || nodes.length === 0) return '';
-    return nodes.map(node => {
-        const isExpanded = folderExpandState.get(node.id) !== false; // 默认展开
+    return nodes.map((node, index) => {
+        // 只有第一个批次的第一个目录默认展开，其他默认收起
+        const shouldExpandByDefault = isFirstBatch && index === 0;
+        const isExpanded = folderExpandState.has(node.id) 
+            ? folderExpandState.get(node.id) 
+            : shouldExpandByDefault;
         const indent = level * 16;
         const hasChildren = node.children && node.children.length > 0;
         const hasApis = node.apis && node.apis.length > 0;
@@ -157,10 +163,10 @@ function renderFolderTree(nodes, level = 0) {
                 <div class="folder-content" id="folder-content-${node.id}" style="display:${isExpanded ? 'block' : 'none'}">
         `;
         
-        // 渲染子目录 - 放在单独的容器中
+        // 渲染子目录 - 放在单独的容器中（子目录不是第一批，所以默认不展开）
         if (node.children && node.children.length > 0) {
             html += `<div class="folder-children-container">`;
-            html += renderFolderTree(node.children, level + 1);
+            html += renderFolderTree(node.children, level + 1, false);
             html += `</div>`;
         }
         

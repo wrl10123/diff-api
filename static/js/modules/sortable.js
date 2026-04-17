@@ -1,9 +1,23 @@
 /**
- * 拖拽排序模块
+ * 拖拽排序模块 - 支持排序和移动
  */
 
-let _dragState = { srcEl: null, startY: 0, started: false, clone: null, dragType: null };
-let _handled = false; // 标记事件是否已处理
+let _dragState = { 
+    srcEl: null, 
+    startY: 0, 
+    started: false, 
+    clone: null, 
+    dragType: null,
+    container: null,
+    hoverTarget: null,
+    hoverStartTime: 0,
+    longPressTimer: null,
+    isMoving: false
+};
+let _handled = false;
+
+// 长按时间阈值（1秒）
+const LONG_PRESS_DURATION = 1000;
 
 /**
  * 使列表可排序
@@ -13,10 +27,8 @@ let _handled = false; // 标记事件是否已处理
 export function makeSortable(listEl, listType) {
     if (!listEl) return;
     
-    // 给容器标记类型
     listEl._sortableType = listType;
     
-    // 只获取直接子元素，避免嵌套元素也被选中
     const children = Array.from(listEl.children);
     let items;
     
@@ -38,9 +50,6 @@ export function makeSortable(listEl, listType) {
     });
 }
 
-/**
- * 根据类型获取选择器
- */
 function _getSelector(listType) {
     switch (listType) {
         case 'folders': return '.folder-item:not(.empty-tip)';
@@ -50,32 +59,8 @@ function _getSelector(listType) {
     }
 }
 
-/**
- * 检查元素是否可拖拽（根据拖拽类型和目标元素类型）
- */
-function _canDrag(dragType, targetEl) {
-    if (!targetEl) return false;
-    
-    switch (dragType) {
-        case 'folders':
-            // 目录只能拖拽目录项
-            return targetEl.classList.contains('folder-item');
-        case 'apis':
-            // API只能拖拽API项
-            return targetEl.classList.contains('api-item');
-        case 'testCases':
-            // 用例只能拖拽用例项
-            return targetEl.classList.contains('test-case-item');
-        default:
-            return true;
-    }
-}
-
 function _onDragMouseDown(e) {
-    // 如果事件已经处理过，直接返回
     if (_handled) return;
-    
-    // 排除按钮、菜单等交互元素
     if (e.button !== 0 || e.target.closest('button, .tc-toggle, .folder-menu, .folder-menu-dropdown, .folder-menu-btn, .actions')) return;
 
     const item = this;
@@ -84,22 +69,14 @@ function _onDragMouseDown(e) {
     
     if (!container) return;
     
-    // 关键检查：确保点击的是元素本身，而不是子元素
-    // 如果事件目标不是当前item或其直接子元素（排除嵌套的可拖拽元素），则返回
     if (dragType === 'folders') {
-        // 如果点击的是API或用例（在目录内部），不触发目录拖拽
         if (e.target.closest('.api-item, .test-case-item')) return;
-        // 如果点击的是API容器或用例容器（在目录内部），不触发目录拖拽
         if (e.target.closest('.folder-apis-container, .test-case-list')) return;
     }
     
-    // 确保当前item确实在容器中
     if (item.parentElement !== container) return;
     
-    // 标记事件已处理，防止触发父级容器的拖拽
     _handled = true;
-    
-    // 在下一个事件循环中重置标记
     setTimeout(() => { _handled = false; }, 0);
 
     _dragState.srcEl = item;
@@ -107,6 +84,9 @@ function _onDragMouseDown(e) {
     _dragState.started = false;
     _dragState.dragType = dragType;
     _dragState.container = container;
+    _dragState.hoverTarget = null;
+    _dragState.hoverStartTime = 0;
+    _dragState.isMoving = false;
 
     document.addEventListener('mousemove', _onDragMouseMove);
     document.addEventListener('mouseup', _onDragMouseUp);
@@ -137,53 +117,28 @@ function _onDragMouseMove(e) {
     }
 
     if (_dragState.started && _dragState.clone) {
-        _dragState.clone.style.top = (e.clientY - _dragState.startY + _dragState.startY - _dragState.srcEl.offsetHeight / 2) + 'px';
+        _dragState.clone.style.top = (e.clientY - _dragState.srcEl.offsetHeight / 2) + 'px';
         _dragState.clone.style.left = _dragState.srcEl.getBoundingClientRect().left + 'px';
-        _highlightDropTarget(e.clientY);
+        _handleDragHover(e.clientY);
     }
 }
 
-function _highlightDropTarget(mouseY) {
-    // 清除之前的高亮
-    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-
+function _handleDragHover(mouseY) {
     const dragType = _dragState.dragType;
-    const container = _dragState.container;
     const srcEl = _dragState.srcEl;
     
-    if (!container || !srcEl) return;
+    if (!srcEl) return;
     
-    let selector;
-    switch (dragType) {
-        case 'folders': selector = '.folder-item'; break;
-        case 'apis': selector = '.api-item'; break;
-        case 'testCases': selector = '.test-case-item'; break;
-        default: selector = '.sortable-item';
-    }
-
-    // 只在同一个容器内查找可放置目标
-    // 获取容器的直接子元素中匹配选择器的元素
-    const children = Array.from(container.children);
-    let items;
+    // 清除之前的高亮
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    document.querySelectorAll('.drag-over-move').forEach(el => el.classList.remove('drag-over-move'));
     
-    if (dragType === 'folders') {
-        // 目录容器(folderTree)的直接子元素是folder-item
-        items = children.filter(el => el.classList.contains('folder-item'));
-    } else if (dragType === 'apis') {
-        // API容器(folder-apis-container)的直接子元素是api-item
-        items = children.filter(el => el.classList.contains('api-item'));
-    } else if (dragType === 'testCases') {
-        // 用例容器(test-case-list)的直接子元素是test-case-item
-        items = children.filter(el => el.classList.contains('test-case-item'));
-    } else {
-        items = children.filter(el => el.matches(selector));
-    }
-    
-    // 排除正在拖拽的元素
-    items = items.filter(el => el !== srcEl && !el.classList.contains('dragging'));
-    
+    // 查找当前悬停的目标
     let target = null;
-    for (const el of items) {
+    const allItems = document.querySelectorAll('.folder-item, .api-item, .test-case-item');
+    
+    for (const el of allItems) {
+        if (el === srcEl || el.classList.contains('dragging')) continue;
         const rect = el.getBoundingClientRect();
         if (mouseY >= rect.top && mouseY <= rect.bottom) {
             target = el;
@@ -191,14 +146,74 @@ function _highlightDropTarget(mouseY) {
         }
     }
     
-    if (target) {
-        target.classList.add('drag-over');
+    if (!target) {
+        _dragState.hoverTarget = null;
+        _dragState.hoverStartTime = 0;
+        if (_dragState.longPressTimer) {
+            clearTimeout(_dragState.longPressTimer);
+            _dragState.longPressTimer = null;
+        }
+        return;
+    }
+    
+    // 目录特殊处理：支持移动到另一目录
+    if (dragType === 'folders' && target.classList.contains('folder-item')) {
+        // 检查是否悬停在新目标上
+        if (_dragState.hoverTarget !== target) {
+            // 新的悬停目标，重置计时
+            _dragState.hoverTarget = target;
+            _dragState.hoverStartTime = Date.now();
+            _dragState.isMoving = false;
+            
+            // 清除之前的定时器
+            if (_dragState.longPressTimer) {
+                clearTimeout(_dragState.longPressTimer);
+            }
+            
+            // 添加悬停高亮
+            target.classList.add('drag-over');
+            
+            // 启动长按定时器
+            _dragState.longPressTimer = setTimeout(() => {
+                if (_dragState.hoverTarget === target) {
+                    _dragState.isMoving = true;
+                    target.classList.remove('drag-over');
+                    target.classList.add('drag-over-move');
+                }
+            }, LONG_PRESS_DURATION);
+        } else {
+            // 继续悬停在同一目标上，检查是否已触发移动
+            if (_dragState.isMoving) {
+                target.classList.add('drag-over-move');
+            } else {
+                target.classList.add('drag-over');
+            }
+        }
+    } else {
+        // 其他类型：普通排序
+        _dragState.hoverTarget = null;
+        _dragState.hoverStartTime = 0;
+        if (_dragState.longPressTimer) {
+            clearTimeout(_dragState.longPressTimer);
+            _dragState.longPressTimer = null;
+        }
+        
+        // 只在同容器内才显示排序高亮
+        if (target.parentElement === _dragState.container) {
+            target.classList.add('drag-over');
+        }
     }
 }
 
 function _onDragMouseUp(e) {
     document.removeEventListener('mousemove', _onDragMouseMove);
     document.removeEventListener('mouseup', _onDragMouseUp);
+    
+    // 清除定时器
+    if (_dragState.longPressTimer) {
+        clearTimeout(_dragState.longPressTimer);
+        _dragState.longPressTimer = null;
+    }
 
     if (!_dragState.srcEl) return;
 
@@ -211,31 +226,80 @@ function _onDragMouseUp(e) {
     _dragState.srcEl.style.userSelect = '';
 
     if (_dragState.started) {
-        const dropTarget = document.querySelector('.drag-over');
+        const dropTarget = document.querySelector('.drag-over, .drag-over-move');
         if (dropTarget && dropTarget !== _dragState.srcEl) {
             const container = _dragState.container;
             const dragType = _dragState.dragType;
             
-            // 确保在同容器内才进行排序
-            if (dropTarget.parentElement === container) {
+            // 检查是否是目录移动操作
+            if (dragType === 'folders' && _dragState.isMoving && dropTarget.classList.contains('drag-over-move')) {
+                // 执行目录移动
+                _moveFolderToFolder(_dragState.srcEl, dropTarget);
+            } else if (dropTarget.parentElement === container) {
+                // 执行排序
                 _reorderElements(_dragState.srcEl, dropTarget, container, dragType);
             }
         }
-        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        document.querySelectorAll('.drag-over, .drag-over-move').forEach(el => {
+            el.classList.remove('drag-over', 'drag-over-move');
+        });
     }
 
     _dragState.srcEl = null;
     _dragState.started = false;
     _dragState.dragType = null;
     _dragState.container = null;
+    _dragState.hoverTarget = null;
+    _dragState.hoverStartTime = 0;
+    _dragState.isMoving = false;
     _handled = false;
 }
 
 /**
- * 重新排序元素
+ * 移动目录到另一目录
  */
+async function _moveFolderToFolder(srcFolder, targetFolder) {
+    const srcId = srcFolder.dataset.folderId;
+    const targetId = targetFolder.dataset.folderId;
+    
+    if (srcId === targetId) return;
+    
+    // 检查是否是将父目录移动到子目录（避免循环）
+    if (_isDescendant(targetFolder, srcFolder)) {
+        alert('不能将目录移动到其子目录中');
+        return;
+    }
+    
+    try {
+        await fetch('/api/folders/' + srcId, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ parent_id: targetId })
+        });
+        
+        // 刷新目录树
+        const { loadFolders } = await import('./folder.js');
+        const { currentProjectId } = await import('./project.js');
+        if (currentProjectId) loadFolders(currentProjectId);
+    } catch (err) {
+        console.error('移动目录失败:', err);
+        alert('移动目录失败: ' + err.message);
+    }
+}
+
+/**
+ * 检查元素是否是另一元素的后代
+ */
+function _isDescendant(descendant, ancestor) {
+    let parent = descendant.parentElement;
+    while (parent) {
+        if (parent === ancestor) return true;
+        parent = parent.parentElement;
+    }
+    return false;
+}
+
 function _reorderElements(srcEl, dropTarget, container, type) {
-    // 获取容器的直接子元素中匹配类型的元素
     const children = Array.from(container.children);
     let items;
     
@@ -260,7 +324,6 @@ function _reorderElements(srcEl, dropTarget, container, type) {
         dropTarget.before(srcEl);
     }
     
-    // 重新获取排序后的元素
     const newChildren = Array.from(container.children);
     let newItems;
     
@@ -289,12 +352,8 @@ function _reorderElements(srcEl, dropTarget, container, type) {
     _saveReorder(type, newOrder);
 }
 
-/**
- * 保存排序
- */
 async function _saveReorder(type, orderedIds) {
     let endpoint = '';
-    // 统一类型名称
     const normalizedType = type === 'folders' ? 'folder' : 
                           type === 'apis' ? 'api' : 
                           type === 'testCases' ? 'testCase' : type;
@@ -303,9 +362,6 @@ async function _saveReorder(type, orderedIds) {
         case 'folder': endpoint = '/api/groups/reorder'; break;
         case 'api': endpoint = '/api/apis/reorder'; break;
         case 'testCase': endpoint = '/api/test-cases/reorder'; break;
-        case 'default':
-            endpoint = _getEndpointByListId();
-            break;
         default: return;
     }
     
@@ -322,11 +378,6 @@ async function _saveReorder(type, orderedIds) {
     }
 }
 
-/**
- * 保存排序（兼容旧接口）
- * @param {string} listId - 列表ID
- * @param {number[]} orderedIds - 排序后的ID数组
- */
 export async function saveReorder(listId, orderedIds) {
     let endpoint = '';
     switch (listId) {

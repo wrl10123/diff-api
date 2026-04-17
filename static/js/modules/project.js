@@ -58,11 +58,14 @@ export async function loadProjects() {
         const projects = await res.json();
         const listEl = document.getElementById('projectList');
         listEl.innerHTML = projects.map(p => `
-            <div class="tree-item sortable" onclick="selectProject(${p.id})" id="project-${p.id}">
+            <div class="tree-item sortable project-item" onclick="selectProject(${p.id})" id="project-${p.id}">
                 <span class="item-name" data-name="${esc(p.name)}" data-desc="${esc(p.description||'')}">&#128193; ${esc(p.name)}</span>
-                <div class="actions">
-                    <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();openProjectModal(${p.id})">✏️</button>
-                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject(${p.id})">🗑️</button>
+                <div class="project-menu">
+                    <button class="project-menu-btn" onclick="event.stopPropagation();toggleProjectMenu(this)" title="更多操作">⋯</button>
+                    <div class="project-menu-dropdown" id="project-menu-${p.id}">
+                        <div onclick="event.stopPropagation();openProjectModal(${p.id});hideProjectMenu(${p.id})">✏️ 编辑项目</div>
+                        <div onclick="event.stopPropagation();deleteProject(${p.id});hideProjectMenu(${p.id})" class="delete">🗑️ 删除项目</div>
+                    </div>
                 </div>
             </div>
         `).join('') || '<div class="empty-tip">暂无项目</div>';
@@ -158,9 +161,43 @@ export function onSortChange(listType, value) {
     }
 }
 
+/**
+ * 切换项目操作菜单显示/隐藏
+ * @param {HTMLElement} btn - 菜单按钮
+ */
+export function toggleProjectMenu(btn) {
+    const menu = btn.nextElementSibling;
+    if (!menu) return;
+    
+    // 关闭其他打开的菜单
+    document.querySelectorAll('.project-menu-dropdown.show').forEach(m => {
+        if (m !== menu) m.classList.remove('show');
+    });
+    
+    menu.classList.toggle('show');
+}
+
+/**
+ * 隐藏项目菜单
+ * @param {number} projectId - 项目ID
+ */
+export function hideProjectMenu(projectId) {
+    const menu = document.getElementById(`project-menu-${projectId}`);
+    if (menu) menu.classList.remove('show');
+}
+
+// 点击页面其他地方关闭菜单
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.project-menu-btn')) {
+        document.querySelectorAll('.project-menu-dropdown.show').forEach(m => m.classList.remove('show'));
+    }
+});
+
 // 暴露到window供HTML内联事件使用
 window.openProjectModal = openProjectModal;
 window.saveProject = saveProject;
 window.selectProject = selectProject;
 window.deleteProject = deleteProject;
 window.onSortChange = onSortChange;
+window.toggleProjectMenu = toggleProjectMenu;
+window.hideProjectMenu = hideProjectMenu;

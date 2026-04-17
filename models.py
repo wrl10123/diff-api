@@ -23,6 +23,16 @@ class Project(db.Model):
     environments = db.relationship('Environment', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     variables = db.relationship('Variable', backref='project', lazy='dynamic', cascade='all, delete-orphan')
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'sort_order': self.sort_order,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 
 class ApiGroup(db.Model):
     """API目录表（支持嵌套）"""
@@ -42,6 +52,19 @@ class ApiGroup(db.Model):
     apis = db.relationship('ApiConfig', backref='group', lazy='dynamic', cascade='all, delete-orphan')
     children = db.relationship('ApiGroup', backref=db.backref('parent', remote_side=[id]), lazy='dynamic', cascade='all, delete-orphan')
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'project_id': self.project_id,
+            'parent_id': self.parent_id,
+            'name': self.name,
+            'description': self.description,
+            'sort_order': self.sort_order,
+            'is_expanded': self.is_expanded,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 
 class ApiConfig(db.Model):
     """API配置表"""
@@ -59,6 +82,24 @@ class ApiConfig(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
 
+    # 关联
+    test_cases = db.relationship('TestCase', backref='api', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'group_id': self.group_id,
+            'name': self.name,
+            'path': self.path,
+            'method': self.method,
+            'headers': self.headers,
+            'body': self.body,
+            'description': self.description,
+            'sort_order': self.sort_order,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 
 class Environment(db.Model):
     """环境配置表"""
@@ -75,6 +116,20 @@ class Environment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'project_id': self.project_id,
+            'name': self.name,
+            'base_url': self.base_url,
+            'default_headers': self.default_headers,
+            'default_body': self.default_body,
+            'description': self.description,
+            'sort_order': self.sort_order,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 
 class DiffRecord(db.Model):
     """对比记录表"""
@@ -88,6 +143,18 @@ class DiffRecord(db.Model):
     env2_response = db.Column(db.Text, comment='环境2响应(截取前2000字符)')
     diff_result = db.Column(db.Text, comment='对比结果(JSON,截取前2000字符)')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'api_id': self.api_id,
+            'env1_url': self.env1_url,
+            'env2_url': self.env2_url,
+            'env1_response': self.env1_response,
+            'env2_response': self.env2_response,
+            'diff_result': self.diff_result,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
 
 class TestCase(db.Model):
@@ -111,6 +178,26 @@ class TestCase(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'api_id': self.api_id,
+            'name': self.name,
+            'env1_id': self.env1_id,
+            'env2_id': self.env2_id,
+            'url1': self.url1,
+            'url2': self.url2,
+            'method': self.method,
+            'headers1': self.headers1,
+            'headers2': self.headers2,
+            'body1': self.body1,
+            'body2': self.body2,
+            'diff_result': self.diff_result,
+            'sort_order': self.sort_order,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 
 class Variable(db.Model):
     """全局变量表"""
@@ -127,3 +214,14 @@ class Variable(db.Model):
     __table_args__ = (
         db.UniqueConstraint('project_id', 'name', name='uq_project_variable'),
     )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'project_id': self.project_id,
+            'name': self.name,
+            'value': self.value,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

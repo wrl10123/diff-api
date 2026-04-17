@@ -136,17 +136,15 @@ export async function saveTestCase() {
     const url2 = document.getElementById('url2').value.trim();
     if (!url1 || !url2) return alert('请先填写环境1和环境2的URL');
 
+    const isUpdate = !!window.currentTestCaseId;
+
     let caseName = null;
-    if (window.currentTestCaseId) {
-        caseName = null;
-    } else {
+    if (!isUpdate) {
         caseName = prompt('请输入用例名称：', '用例' + new Date().toLocaleTimeString());
         if (!caseName) return;
     }
 
     const data = {
-        id: window.currentTestCaseId || undefined,
-        name: caseName,
         env1_id: document.getElementById('env1Select').value || null,
         env2_id: document.getElementById('env2Select').value || null,
         url1: url1,
@@ -159,16 +157,25 @@ export async function saveTestCase() {
         diff_result: window.lastDiffResult || null
     };
 
+    // 新建时才传名称
+    if (!isUpdate) {
+        data.name = caseName;
+    }
+
+    const url = isUpdate 
+        ? '/api/test-cases/' + window.currentTestCaseId 
+        : '/api/apis/' + apiId + '/test-cases';
+    const method = isUpdate ? 'PUT' : 'POST';
+
     try {
-        const res = await fetch('/api/apis/' + apiId + '/test-cases', {
-            method: 'POST',
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         const result = await res.json();
         if (result.success) {
-            const isUpdate = !!window.currentTestCaseId;
-            window.currentTestCaseId = result.id;
+            window.currentTestCaseId = result.id || window.currentTestCaseId;
             document.getElementById('saveCaseBtn').textContent = '更新用例';
             alert(isUpdate ? '用例已更新' : '用例已保存');
             if (window.currentGroupId) {
