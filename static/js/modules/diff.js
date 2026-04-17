@@ -20,6 +20,24 @@ export async function executeDiff() {
     let headers2 = getFieldJsonValue('headers2');
     let body1 = getFieldJsonValue('body1');
     let body2 = getFieldJsonValue('body2');
+    
+    // 获取查询参数（从当前选中的API）
+    let queryParams1 = {};
+    let queryParams2 = {};
+    const apiId = document.getElementById('diffApiSelect').value;
+    if (apiId) {
+        const apiEl = document.querySelector(`[data-api-id="${apiId}"]`);
+        if (apiEl) {
+            const nameEl = apiEl.querySelector('.api-name');
+            if (nameEl && nameEl.dataset.queryParams) {
+                try {
+                    const params = JSON.parse(nameEl.dataset.queryParams);
+                    queryParams1 = params;
+                    queryParams2 = params;
+                } catch(e) {}
+            }
+        }
+    }
 
     // 替换变量占位符
     url1 = replaceVariables(url1);
@@ -34,8 +52,12 @@ export async function executeDiff() {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-            api_id: document.getElementById('diffApiSelect').value || null,
-            url1, url2, method, headers1, headers2, body1, body2
+            api_id: apiId || null,
+            url1, url2, method, 
+            headers1, headers2, 
+            body1, body2,
+            query_params1: queryParams1,
+            query_params2: queryParams2
         })
     });
     const result = await res.json();

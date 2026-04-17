@@ -705,6 +705,56 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
     color: #c82333;
 }
 
+/* ========== 导入弹窗标签页样式 ========== */
+.import-format-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 8px;
+}
+
+.import-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #f9f9f9;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+    color: #666;
+}
+
+.import-tab:hover {
+    background: #f0f7ff;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.import-tab.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: #fff;
+}
+
+.import-tab .tab-icon {
+    font-size: 16px;
+}
+
+.import-tab .tab-text {
+    font-weight: 500;
+}
+
+.import-format-desc {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
 /* ========== 环境管理弹窗样式 ========== */
 .env-manage-container {
     display: flex;

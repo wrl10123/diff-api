@@ -1,7 +1,7 @@
 -- ============================================================
 -- schema.sql - 当前完整表结构快照
--- 生成时间: 2026-04-09
--- 对应: models.py (含 sort_order 字段)
+-- 生成时间: 2026-04-17
+-- 对应: models.py (含所有字段)
 -- 用途: 全新部署时直接执行此文件即可
 -- ============================================================
 
@@ -23,21 +23,25 @@ CREATE TABLE `projects` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目表';
 
 -- -----------------------------------------------------------
--- API分组表 (api_groups)
+-- API目录表 (api_groups) - 支持多级嵌套
 -- -----------------------------------------------------------
 DROP TABLE IF EXISTS `api_groups`;
 CREATE TABLE `api_groups` (
     `id`          INT           NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `project_id`  INT           NOT NULL                COMMENT '项目ID',
-    `name`        VARCHAR(100)  NOT NULL                COMMENT '分组名称',
-    `description` VARCHAR(500)  DEFAULT ''              COMMENT '分组描述',
+    `parent_id`   INT           DEFAULT NULL            COMMENT '父目录ID，NULL表示根目录',
+    `name`        VARCHAR(100)  NOT NULL                COMMENT '目录名称',
+    `description` VARCHAR(500)  DEFAULT ''              COMMENT '目录描述',
     `sort_order`  INT           DEFAULT 0               COMMENT '排序序号',
+    `is_expanded` TINYINT       DEFAULT 1               COMMENT '是否展开，1=展开，0=收起',
     `created_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     KEY `idx_project_id` (`project_id`),
-    CONSTRAINT `fk_api_groups_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API分组表';
+    KEY `idx_parent_id` (`parent_id`),
+    CONSTRAINT `fk_api_groups_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_api_groups_parent` FOREIGN KEY (`parent_id`) REFERENCES `api_groups` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API目录表（支持多级嵌套）';
 
 -- -----------------------------------------------------------
 -- 环境配置表 (environments)
@@ -66,8 +70,10 @@ DROP TABLE IF EXISTS `api_configs`;
 CREATE TABLE `api_configs` (
     `id`          INT           NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `group_id`    INT           NOT NULL                COMMENT '分组ID',
+    `project_id`  INT           DEFAULT NULL            COMMENT '项目ID（预留）',
     `name`        VARCHAR(100)  NOT NULL                COMMENT 'API名称',
-    `path`        VARCHAR(500)  NOT NULL                COMMENT '路径',
+    `path`        VARCHAR(500)  NOT NULL                COMMENT '路径（不含查询参数）',
+    `query_params` TEXT                                  COMMENT 'URL查询参数(JSON对象)',
     `method`      VARCHAR(10)   DEFAULT 'POST'          COMMENT '请求方法',
     `headers`     TEXT                                   COMMENT '请求头(JSON字符串)',
     `body`        TEXT                                   COMMENT '请求体(JSON字符串)',
@@ -105,6 +111,7 @@ DROP TABLE IF EXISTS `test_cases`;
 CREATE TABLE `test_cases` (
     `id`          INT           NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `api_id`      INT           NOT NULL                COMMENT 'API配置ID',
+    `project_id`  INT           DEFAULT NULL            COMMENT '项目ID（预留）',
     `name`        VARCHAR(100)  NOT NULL DEFAULT '未命名用例' COMMENT '用例名称',
     `env1_id`     INT                                   COMMENT '环境1 ID',
     `env2_id`     INT                                   COMMENT '环境2 ID',
@@ -116,6 +123,7 @@ CREATE TABLE `test_cases` (
     `body1`       TEXT                                  COMMENT '环境1请求体(JSON字符串)',
     `body2`       TEXT                                  COMMENT '环境2请求体(JSON字符串)',
     `diff_result` TEXT                                  COMMENT '最近一次对比结果(JSON)',
+    `sort_order`  INT           DEFAULT 0               COMMENT '排序序号',
     `created_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`  DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),

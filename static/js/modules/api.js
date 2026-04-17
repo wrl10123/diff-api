@@ -158,22 +158,39 @@ export function selectApiForDiff(apiId) {
         const nameEl = apiEl.querySelector('.api-name');
         if (nameEl) {
             const apiPath = nameEl.dataset.path || '';
+            const apiQueryParamsStr = nameEl.dataset.queryParams || '{}';
             const apiMethod = nameEl.dataset.method || 'POST';
             const apiHeadersStr = nameEl.dataset.headers || '{}';
             const apiBodyStr = nameEl.dataset.body || '{}';
             
-            // 解析API的headers和body
+            // 解析API的headers、body和query_params
             let apiHeaders = {};
             let apiBody = {};
+            let apiQueryParams = {};
             try { apiHeaders = JSON.parse(stripJsonComments(apiHeadersStr)); } catch(e) { apiHeaders = {}; }
             try { apiBody = JSON.parse(stripJsonComments(apiBodyStr)); } catch(e) { apiBody = {}; }
+            try { apiQueryParams = JSON.parse(stripJsonComments(apiQueryParamsStr)); } catch(e) { apiQueryParams = {}; }
             
             // 直接更新表单
             document.getElementById('method').value = apiMethod;
             
-            // 更新环境1和环境2的headers和body
+            // 更新URL - 确保path被正确拼接
+            const sel1 = document.getElementById('env1Select');
+            const sel2 = document.getElementById('env2Select');
+            
+            if (!sel1.value && window.envDataCache && window.envDataCache.length > 0) {
+                sel1.value = window.envDataCache[0].id;
+            }
+            if (!sel2.value && window.envDataCache && window.envDataCache.length > 1) {
+                sel2.value = window.envDataCache[1].id;
+            } else if (!sel2.value && window.envDataCache && window.envDataCache.length > 0) {
+                sel2.value = window.envDataCache[0].id;
+            }
+            
+            onEnvChange(1, false);
+            onEnvChange(2, false);
+            
             for (const side of [1, 2]) {
-                // 获取当前环境的默认值
                 const envId = document.getElementById('env' + side + 'Select').value;
                 let envHeaders = {};
                 let envBody = {};
@@ -186,33 +203,12 @@ export function selectApiForDiff(apiId) {
                     }
                 }
                 
-                // 合并：环境默认值 + API特定值（API值优先）
                 const mergedHeaders = { ...envHeaders, ...apiHeaders };
                 const mergedBody = { ...envBody, ...apiBody };
                 
-                // 设置到表单
                 setFieldValue('headers' + side, mergedHeaders);
                 setFieldValue('body' + side, mergedBody);
             }
-            
-            // 更新URL - 确保path被正确拼接
-            // 先检查环境选择框是否有值，如果没有且环境列表不为空，则默认选择
-            const sel1 = document.getElementById('env1Select');
-            const sel2 = document.getElementById('env2Select');
-            
-            // 如果环境选择为空但有环境数据，设置默认值
-            if (!sel1.value && window.envDataCache && window.envDataCache.length > 0) {
-                sel1.value = window.envDataCache[0].id;
-            }
-            if (!sel2.value && window.envDataCache && window.envDataCache.length > 1) {
-                sel2.value = window.envDataCache[1].id;
-            } else if (!sel2.value && window.envDataCache && window.envDataCache.length > 0) {
-                sel2.value = window.envDataCache[0].id;
-            }
-            
-            // 触发环境变更以更新URL
-            onEnvChange(1);
-            onEnvChange(2);
             return;
         }
     }

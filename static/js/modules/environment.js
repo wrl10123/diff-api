@@ -188,8 +188,9 @@ export function refreshEnvSelects() {
 /**
  * 环境选择变更
  * @param {number} side - 环境侧 (1 或 2)
+ * @param {boolean} updateHeadersBody - 是否更新headers和body，默认true
  */
-export function onEnvChange(side) {
+export function onEnvChange(side, updateHeadersBody = true) {
     const sel = document.getElementById('env' + side + 'Select');
     const urlInput = document.getElementById('url' + side);
     const envId = sel.value;
@@ -198,8 +199,10 @@ export function onEnvChange(side) {
         if (env) {
             const apiPath = document.getElementById('diffApiSelect').selectedOptions[0]?.dataset?.path || '';
             urlInput.value = env.base_url.replace(/[/]+$/, '') + apiPath;
-            setFieldValue('headers' + side, env.default_headers || '{}');
-            setFieldValue('body' + side, env.default_body || '{}');
+            if (updateHeadersBody) {
+                setFieldValue('headers' + side, env.default_headers || '{}');
+                setFieldValue('body' + side, env.default_body || '{}');
+            }
         }
     }
 }

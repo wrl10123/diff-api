@@ -73,7 +73,8 @@ class ApiConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('api_groups.id'), nullable=False, comment='分组ID')
     name = db.Column(db.String(100), nullable=False, comment='API名称')
-    path = db.Column(db.String(500), nullable=False, comment='路径')
+    path = db.Column(db.String(500), nullable=False, comment='路径（不含查询参数）')
+    query_params = db.Column(db.Text, comment='URL查询参数(JSON对象，如{"page": "1", "size": "10"})')
     method = db.Column(db.String(10), default='POST', comment='请求方法')
     headers = db.Column(db.Text, comment='请求头(JSON字符串)')
     body = db.Column(db.Text, comment='请求体(JSON字符串)')
@@ -91,6 +92,7 @@ class ApiConfig(db.Model):
             'group_id': self.group_id,
             'name': self.name,
             'path': self.path,
+            'query_params': self.query_params,
             'method': self.method,
             'headers': self.headers,
             'body': self.body,

@@ -98,3 +98,42 @@ def merge_dicts(base: dict, override: dict) -> dict:
     if not override:
         return base
     return {**base, **override}
+
+
+def dump_json(val: Any) -> str:
+    """
+    将字典转为JSON字符串，其他类型直接返回
+    
+    Args:
+        val: 要处理的值
+    
+    Returns:
+        JSON字符串（如果是字典）或原值（如果不是字典），None时返回'{}'
+    """
+    if isinstance(val, dict):
+        return to_json(val, ensure_ascii=False)
+    return val or '{}'
+
+
+def build_url(base_url: str, query_params: Dict[str, Any]) -> str:
+    """
+    构建带有查询参数的URL
+    
+    Args:
+        base_url: 基础URL
+        query_params: 查询参数字典
+    
+    Returns:
+        带有查询参数的完整URL
+    """
+    if not query_params:
+        return base_url
+    from urllib.parse import urlencode, urlparse, urlunparse
+    parsed = urlparse(base_url)
+    existing_params = parsed.query
+    new_params = urlencode(query_params, doseq=True)
+    if existing_params:
+        full_query = existing_params + '&' + new_params
+    else:
+        full_query = new_params
+    return urlunparse(parsed._replace(query=full_query))

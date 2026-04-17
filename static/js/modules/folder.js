@@ -181,7 +181,7 @@ function renderFolderTree(nodes, level = 0, isFirstBatch = false) {
                      onclick="selectApiForDiff(${api.id})">
                     <span class="tc-toggle" onclick="event.stopPropagation();toggleTestCases(this.parentElement)" title="点击展开收起用例">▶</span>
                     <span class="api-method method-${api.method}">${api.method}</span>
-                    <span class="api-name" title="${esc(api.path)}" data-name="${esc(api.name)}" data-path="${esc(api.path)}" data-method="${esc(api.method)}" data-headers="${esc(api.headers||'{}')}" data-body="${esc(api.body||'{}')}">${esc(api.name)}</span>
+                    <span class="api-name" title="${esc(api.path)}" data-name="${esc(api.name)}" data-path="${esc(api.path)}" data-query-params="${esc(api.query_params||'{}')}" data-method="${esc(api.method)}" data-headers="${esc(api.headers||'{}')}" data-body="${esc(api.body||'{}')}">${esc(api.name)}</span>
                     <div class="actions">
                         <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();openApiModal(${api.id})" title="编辑">✏️</button>
                         <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteApi(${api.id})" title="删除">🗑️</button>

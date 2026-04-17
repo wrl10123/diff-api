@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify, render_template, Response
 from sqlalchemy.orm import Query
 from models import db, Project, ApiGroup, ApiConfig, Environment, DiffRecord, TestCase, Variable
 from diff_service import DiffService
-from utils import to_json, from_json, parse_json_field, safe_json_dumps
+from utils import to_json, from_json, parse_json_field, safe_json_dumps, dump_json, build_url
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:WRLwrl123.@127.0.0.1:3306/mydata'
@@ -302,6 +302,19 @@ def _import_openapi_impl(group_id: int) -> Response:
         # 支持 tag 格式："目录名/子目录名" 或 "目录名"
         return tags[0] if tags else None
 
+    def extract_query_params_from_operation(operation: Dict[str, Any]) -> str:
+        """从operation中提取URL查询参数"""
+        query_params = {}
+        parameters = operation.get('parameters', [])
+        for param in parameters:
+            if param.get('in') == 'query':
+                param_name = param.get('name')
+                param_schema = param.get('schema', {})
+                param_value = param_schema.get('default', '')
+                if param_name:
+                    query_params[param_name] = param_value
+        return safe_json_dumps(query_params) if query_params else '{}'
+
     def extract_headers_from_operation(operation: Dict[str, Any]) -> str:
         """从operation中提取请求头"""
         headers = {}
@@ -425,14 +438,16 @@ def _import_openapi_impl(group_id: int) -> Response:
                 or f'{method.upper()} {path}'
             )
 
-            # 提取请求头和请求体
+            # 提取请求头、请求体和查询参数
             headers = extract_headers_from_operation(operation)
             body = extract_body_from_operation(operation)
+            query_params = extract_query_params_from_operation(operation)
 
             api: ApiConfig = ApiConfig(
                 group_id=target_group_id,
                 name=api_name,
                 path=path,
+                query_params=query_params,
                 method=method.upper(),
                 headers=headers,
                 body=body,
@@ -469,6 +484,201 @@ def _import_openapi_impl(group_id: int) -> Response:
     return jsonify({
         'success': True,
         'message': f'导入完成：创建{stats["folders_created"]}个目录，导入{stats["apis_imported"]}个API，{stats["test_cases_imported"]}个测试用例，跳过{stats["skipped"]}个重复项'
+    })
+
+
+@app.route('/api/folders/<int:folder_id>/import-postman', methods=['POST'])
+def import_postman_collection(folder_id: int) -> Response:
+    """从Postman Collection导入API"""
+    folder: ApiGroup = ApiGroup.query.get_or_404(folder_id)
+    project_id: int = folder.project_id
+    data: Dict[str, Any] = request.json or {}
+    collection: Any = data.get('collection')
+
+    if not collection:
+        return jsonify({'success': False, 'error': '缺少Postman Collection内容'}), 400
+
+    if isinstance(collection, str):
+        collection = from_json(collection)
+        if collection == {}:
+            return jsonify({'success': False, 'error': 'JSON格式错误'}), 400
+
+    # 统计信息
+    stats = {
+        'folders_created': 0,
+        'apis_imported': 0,
+        'variables_imported': 0,
+        'skipped': 0
+    }
+
+    # 创建目录映射
+    folder_cache: Dict[str, int] = {}
+    folder_cache['root'] = folder_id
+
+    def get_or_create_folder(folder_name: str, parent_id: int = None) -> int:
+        """获取或创建目录"""
+        cache_key = f"{parent_id or folder_id}:{folder_name}"
+        if cache_key in folder_cache:
+            return folder_cache[cache_key]
+
+        existing = ApiGroup.query.filter_by(
+            project_id=project_id,
+            name=folder_name,
+            parent_id=parent_id or folder_id
+        ).first()
+
+        if existing:
+            folder_cache[cache_key] = existing.id
+            return existing.id
+
+        new_folder = ApiGroup(
+            project_id=project_id,
+            name=folder_name,
+            description='从Postman导入',
+            parent_id=parent_id or folder_id
+        )
+        db.session.add(new_folder)
+        db.session.flush()
+        folder_cache[cache_key] = new_folder.id
+        stats['folders_created'] += 1
+        return new_folder.id
+
+    def process_item(item: Dict[str, Any], parent_folder_id: int) -> None:
+        """递归处理Postman item"""
+        # 如果是文件夹
+        if item.get('item'):
+            folder_name = item.get('name', '未命名文件夹')
+            new_folder_id = get_or_create_folder(folder_name, parent_folder_id)
+            for sub_item in item['item']:
+                process_item(sub_item, new_folder_id)
+        # 如果是请求
+        elif item.get('request'):
+            import_postman_request(item, parent_folder_id, stats)
+
+    def _remove_postman_variables(value: Any) -> Any:
+        """移除Postman风格的{{}}变量"""
+        if isinstance(value, str):
+            # 移除 {{variable}} 形式的变量
+            import re
+            # 匹配 {{variable}} 格式，支持嵌套
+            pattern = r'\{\{[^\}]*\}\}'
+            return re.sub(pattern, '', value)
+        elif isinstance(value, dict):
+            # 递归处理字典
+            return {k: _remove_postman_variables(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            # 递归处理列表
+            return [_remove_postman_variables(item) for item in value]
+        return value
+
+    def import_postman_request(item: Dict[str, Any], group_id: int, stats: Dict) -> None:
+        """导入单个Postman请求"""
+        request_data = item.get('request', {})
+        name = item.get('name', '未命名请求')
+
+        # 解析URL
+        url_data = request_data.get('url', {})
+        if isinstance(url_data, str):
+            url = url_data
+        else:
+            url = url_data.get('raw', '')
+
+        # 提取path（去掉host部分）
+        path = url
+        if '://' in url:
+            path = '/' + url.split('/', 3)[3] if len(url.split('/', 3)) > 3 else '/'
+        # 移除path中的{{}}变量
+        path = _remove_postman_variables(path)
+
+        # 请求方法
+        method = request_data.get('method', 'GET').upper()
+
+        # 检查是否已存在
+        existing = ApiConfig.query.filter_by(
+            group_id=group_id,
+            path=path,
+            method=method
+        ).first()
+
+        if existing:
+            stats['skipped'] += 1
+            return
+
+        # 解析headers
+        headers = {}
+        header_list = request_data.get('header', [])
+        for h in header_list:
+            if h.get('key') and h.get('value'):
+                headers[h['key']] = _remove_postman_variables(h['value'])
+
+        # 解析body
+        body = {}
+        body_data = request_data.get('body', {})
+        if body_data.get('mode') == 'raw' and body_data.get('raw'):
+            try:
+                body = from_json(body_data['raw'])
+                body = _remove_postman_variables(body)
+            except:
+                body = {'raw': _remove_postman_variables(body_data['raw'])}
+        elif body_data.get('mode') == 'urlencoded':
+            for item in body_data.get('urlencoded', []):
+                if item.get('key'):
+                    body[item['key']] = _remove_postman_variables(item.get('value', ''))
+        elif body_data.get('mode') == 'formdata':
+            for item in body_data.get('formdata', []):
+                if item.get('key'):
+                    body[item['key']] = _remove_postman_variables(item.get('value', ''))
+
+        # 解析URL查询参数
+        query_params = {}
+        url_data = request_data.get('url', {})
+        if isinstance(url_data, dict):
+            query_list = url_data.get('query', [])
+            for q in query_list:
+                if q.get('key'):
+                    query_params[q['key']] = _remove_postman_variables(q.get('value', ''))
+
+        api: ApiConfig = ApiConfig(
+            group_id=group_id,
+            name=name,
+            path=path,
+            query_params=safe_json_dumps(query_params) if query_params else '{}',
+            method=method,
+            headers=safe_json_dumps(headers),
+            body=safe_json_dumps(body),
+            description=item.get('description', '')
+        )
+        db.session.add(api)
+        stats['apis_imported'] += 1
+
+    # 处理collection中的items
+    items = collection.get('item', [])
+    for item in items:
+        process_item(item, folder_id)
+
+    # 导入变量
+    variables = collection.get('variable', [])
+    for var in variables:
+        if var.get('key'):
+            existing_var = Variable.query.filter_by(
+                project_id=project_id,
+                name=var['key']
+            ).first()
+            if not existing_var:
+                new_var = Variable(
+                    project_id=project_id,
+                    name=var['key'],
+                    value=var.get('value', ''),
+                    description=f"从Postman导入: {var.get('description', '')}"
+                )
+                db.session.add(new_var)
+                stats['variables_imported'] += 1
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': f'导入完成：创建{stats["folders_created"]}个目录，导入{stats["apis_imported"]}个API，{stats["variables_imported"]}个变量，跳过{stats["skipped"]}个重复项'
     })
 
 
@@ -632,10 +842,22 @@ def execute_diff() -> Response:
     """执行对比"""
     data: Dict[str, Any] = request.json or {}
     
+    # 构建完整URL（包含查询参数）
+    url1 = data.get('url1', '')
+    url2 = data.get('url2', '')
+    query_params1 = data.get('query_params1', {})
+    query_params2 = data.get('query_params2', {})
+    
+    # 如果有查询参数，拼接到URL
+    if query_params1:
+        url1 = build_url(url1, query_params1)
+    if query_params2:
+        url2 = build_url(url2, query_params2)
+    
     try:
         result: Dict[str, Any] = diff_service.diff(
-            url1=data.get('url1'),
-            url2=data.get('url2'),
+            url1=url1,
+            url2=url2,
             method=data.get('method', 'POST'),
             headers1=data.get('headers1'),
             headers2=data.get('headers2'),
@@ -678,12 +900,6 @@ def create_test_case(api_id: int) -> Response:
     api: ApiConfig = ApiConfig.query.get_or_404(api_id)
     data: Dict[str, Any] = request.json or {}
     
-    def _dump(val: Any) -> str:
-        """将字典转为JSON字符串"""
-        if isinstance(val, dict):
-            return to_json(val, ensure_ascii=False)
-        return val or '{}'
-    
     tc: TestCase = TestCase(
         api_id=api_id,
         name=data.get('name', '未命名用例'),
@@ -692,11 +908,11 @@ def create_test_case(api_id: int) -> Response:
         url1=data.get('url1', ''),
         url2=data.get('url2', ''),
         method=data.get('method', 'POST'),
-        headers1=_dump(data.get('headers1')),
-        headers2=_dump(data.get('headers2')),
-        body1=_dump(data.get('body1')),
-        body2=_dump(data.get('body2')),
-        diff_result=_dump(data.get('diff_result'))
+        headers1=dump_json(data.get('headers1')),
+        headers2=dump_json(data.get('headers2')),
+        body1=dump_json(data.get('body1')),
+        body2=dump_json(data.get('body2')),
+        diff_result=dump_json(data.get('diff_result'))
     )
     db.session.add(tc)
     db.session.commit()
@@ -709,12 +925,6 @@ def update_test_case(tc_id: int) -> Response:
     tc: TestCase = TestCase.query.get_or_404(tc_id)
     data: Dict[str, Any] = request.json or {}
     
-    def _dump(val: Any) -> str:
-        """将字典转为JSON字符串"""
-        if isinstance(val, dict):
-            return to_json(val, ensure_ascii=False)
-        return val or '{}'
-    
     tc.name = data.get('name', tc.name)
     tc.env1_id = data.get('env1_id', tc.env1_id)
     tc.env2_id = data.get('env2_id', tc.env2_id)
@@ -722,15 +932,15 @@ def update_test_case(tc_id: int) -> Response:
     tc.url2 = data.get('url2', tc.url2)
     tc.method = data.get('method', tc.method)
     if 'headers1' in data:
-        tc.headers1 = _dump(data['headers1'])
+        tc.headers1 = dump_json(data['headers1'])
     if 'headers2' in data:
-        tc.headers2 = _dump(data['headers2'])
+        tc.headers2 = dump_json(data['headers2'])
     if 'body1' in data:
-        tc.body1 = _dump(data['body1'])
+        tc.body1 = dump_json(data['body1'])
     if 'body2' in data:
-        tc.body2 = _dump(data['body2'])
+        tc.body2 = dump_json(data['body2'])
     if 'diff_result' in data:
-        tc.diff_result = _dump(data['diff_result'])
+        tc.diff_result = dump_json(data['diff_result'])
     db.session.commit()
     return jsonify({'success': True})
 
@@ -843,6 +1053,12 @@ def db_migrate() -> Response:
             db.session.execute(text('ALTER TABLE api_configs ADD COLUMN project_id INT'))
         except Exception as e:
             print(f'添加列 api_configs.project_id 失败（可能已存在）: {e}')
+        
+        # 检查并添加 api_configs.query_params 列
+        try:
+            db.session.execute(text('ALTER TABLE api_configs ADD COLUMN query_params TEXT'))
+        except Exception as e:
+            print(f'添加列 api_configs.query_params 失败（可能已存在）: {e}')
         
         db.session.commit()
         return jsonify({'success': True, 'message': '数据库迁移完成'})

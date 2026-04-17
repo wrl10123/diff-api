@@ -13,6 +13,7 @@ import { loadApisForDiff, openApiModal, saveApi, deleteApi, selectApiForDiff } f
 import { loadVariables } from './modules/variable.js';
 import { loadTestCases, toggleTestCases } from './modules/testCase.js';
 import { toggleInputMode, addKvRow, getFieldJsonValue, setFieldJsonValue } from './modules/kvInput.js';
+import { openImportModal, switchImportFormat, handleImportFile, importAPI } from './modules/import.js';
 
 // 将必要函数暴露到window，供HTML内联事件使用
 window.toggleInputMode = toggleInputMode;
@@ -33,6 +34,10 @@ window.selectEnvForEdit = selectEnvForEdit;
 window.saveEnvFromManage = saveEnvFromManage;
 window.deleteEnvFromManage = deleteEnvFromManage;
 window.onEnvChange = onEnvChange;
+window.openImportModal = openImportModal;
+window.switchImportFormat = switchImportFormat;
+window.handleImportFile = handleImportFile;
+window.importAPI = importAPI;
 
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {

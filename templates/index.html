@@ -20,13 +20,13 @@
                         <span class="flex-1">项目管理</span>
                         <div style="display:flex;gap:4px;align-items:center;">
                             <div class="sort-dropdown" >
-                                <button class="sort-btn" title="排序" hidden>⇅</button>
+                                <button class="sort-btn" title="排序">⇅</button>
                                 <div class="sort-menu">
-                                    <div onclick="onSortChange('environments', 'default')">默认排序</div>
-                                    <div onclick="onSortChange('environments', 'name_asc')">名称 A→Z</div>
-                                    <div onclick="onSortChange('environments', 'name_desc')">名称 Z→A</div>
-                                    <div onclick="onSortChange('environments', 'time_desc')">最新优先</div>
-                                    <div onclick="onSortChange('environments', 'time_asc')">最早优先</div>
+                                    <div onclick="onSortChange('projects', 'default')">默认排序</div>
+                                    <div onclick="onSortChange('projects', 'name_asc')">名称 A→Z</div>
+                                    <div onclick="onSortChange('projects', 'name_desc')">名称 Z→A</div>
+                                    <div onclick="onSortChange('projects', 'time_desc')">最新优先</div>
+                                    <div onclick="onSortChange('projects', 'time_asc')">最早优先</div>
                                 </div>
                             </div>
                             <button class="btn-add" id="varManageBtn" onclick="openVariableModal()" style="display:none" title="变量管理">{ }</button>
@@ -446,45 +446,51 @@
         </div>
     </div>
 
-    <!-- ========== OpenAPI导入弹窗 ========== -->
+    <!-- ========== API导入弹窗（支持多种格式） ========== -->
     <div id="importApiModal" class="modal-overlay">
-        <div class="modal-box" style="width:600px;max-height:80vh;overflow-y:auto;">
-            <h3>导入OpenAPI/Swagger JSON</h3>
-            <p style="color:#888;font-size:13px;margin-bottom:12px;">
-                支持OpenAPI 2.0/3.x规范，自动解析paths下的所有接口<br>
-                <strong>目录结构：</strong>使用 <code>tags</code> 或 <code>x-group</code> 字段定义目录（如："用户管理/登录"）<br>
-                <strong>测试用例：</strong>使用 <code>x-test-cases</code> 扩展字段导入用例
-            </p>
+        <div class="modal-box" style="width:700px;max-height:85vh;overflow-y:auto;">
+            <h3>导入API</h3>
+            
+            <!-- 格式选择标签页 -->
+            <div class="import-format-tabs">
+                <button class="import-tab active" data-format="openapi" onclick="switchImportFormat('openapi')">
+                    <span class="tab-icon">&#128208;</span>
+                    <span class="tab-text">OpenAPI/Swagger</span>
+                </button>
+                <button class="import-tab" data-format="postman" onclick="switchImportFormat('postman')">
+                    <span class="tab-icon">&#128640;</span>
+                    <span class="tab-text">Postman</span>
+                </button>
+            </div>
+            
+            <!-- OpenAPI 格式说明 -->
+            <div id="importFormatDesc-openapi" class="import-format-desc">
+                <p style="color:#888;font-size:13px;margin-bottom:12px;">
+                    支持OpenAPI 2.0/3.x规范，自动解析paths下的所有接口<br>
+                    <strong>目录结构：</strong>使用 <code>tags</code> 或 <code>x-group</code> 字段定义目录（如："用户管理/登录"）<br>
+                    <strong>测试用例：</strong>使用 <code>x-test-cases</code> 扩展字段导入用例
+                </p>
+            </div>
+            
+            <!-- Postman 格式说明 -->
+            <div id="importFormatDesc-postman" class="import-format-desc" style="display:none;">
+                <p style="color:#888;font-size:13px;margin-bottom:12px;">
+                    支持Postman Collection v2.0/v2.1格式<br>
+                    <strong>目录结构：</strong>自动识别Postman的Folder结构<br>
+                    <strong>变量：</strong>支持Postman变量，导入后会转换为系统变量
+                </p>
+            </div>
+            
             <div class="form-group">
                 <label>选择文件或粘贴JSON</label>
-                <input type="file" id="importFileInput" accept=".json,.yaml,.yml" onchange="handleImportFile(event)">
+                <input type="file" id="importFileInput" accept=".json" onchange="handleImportFile(event)">
             </div>
             <div class="form-group">
-                <label>OpenAPI JSON内容</label>
-                <textarea id="importJsonContent" style="width:100%;height:300px;font-family:monospace;font-size:12px;" placeholder='支持格式示例：
-{
-  "openapi": "3.0.0",
-  "info": { "title": "示例API" },
-  "paths": {
-    "/api/users": {
-      "get": {
-        "summary": "获取用户列表",
-        "tags": ["用户管理"],
-        "parameters": [...],
-        "x-test-cases": [
-          {
-            "name": "测试用例1",
-            "headers1": {"Authorization": "token1"},
-            "headers2": {"Authorization": "token2"}
-          }
-        ]
-      }
-    }
-  }
-}'></textarea>
+                <label id="importContentLabel">JSON内容</label>
+                <textarea id="importJsonContent" style="width:100%;height:280px;font-family:monospace;font-size:12px;" placeholder='请先选择导入格式，然后粘贴JSON内容'></textarea>
             </div>
             <div class="flex">
-                <button class="btn btn-primary" onclick="importOpenAPI()">开始导入</button>
+                <button class="btn btn-primary" onclick="importAPI()">开始导入</button>
                 <button class="btn btn-default" onclick="closeModal('importApiModal')">取消</button>
             </div>
         </div>
