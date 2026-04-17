@@ -5,6 +5,8 @@ import { esc } from './utils.js';
 import { setFieldValue, getFieldJsonValue } from './kvInput.js';
 import { renderDiffResult } from './diff.js';
 import { makeSortable } from './sortable.js';
+import { onEnvChange } from './environment.js';
+import { setCurrentTestCaseId, getCurrentTestCaseId, getLastDiffResult, getCurrentGroupId } from './state.js';
 
 // 状态
 export const _testCaseCache = {};
@@ -88,18 +90,17 @@ export function applyTestCaseById(tcId) {
  * @param {Object} tc - 测试用例对象
  */
 export function applyTestCase(tc) {
-    window.currentTestCaseId = tc.id;
+    setCurrentTestCaseId(tc.id);
 
     document.getElementById('diffApiSelect').value = tc.api_id || document.getElementById('diffApiSelect').value;
 
-    // 先设置环境选择，然后触发变更以更新URL
     if (tc.env1_id) {
         document.getElementById('env1Select').value = tc.env1_id;
-        onEnvChange(1);
+        onEnvChange(1, false);
     }
     if (tc.env2_id) {
         document.getElementById('env2Select').value = tc.env2_id;
-        onEnvChange(2);
+        onEnvChange(2, false);
     }
 
     document.getElementById('url1').value = tc.url1 || '';
@@ -136,7 +137,8 @@ export async function saveTestCase() {
     const url2 = document.getElementById('url2').value.trim();
     if (!url1 || !url2) return alert('请先填写环境1和环境2的URL');
 
-    const isUpdate = !!window.currentTestCaseId;
+    const currentTestCaseId = getCurrentTestCaseId();
+    const isUpdate = !!currentTestCaseId;
 
     let caseName = null;
     if (!isUpdate) {
@@ -154,16 +156,15 @@ export async function saveTestCase() {
         headers2: getFieldJsonValue('headers2'),
         body1: getFieldJsonValue('body1'),
         body2: getFieldJsonValue('body2'),
-        diff_result: window.lastDiffResult || null
+        diff_result: getLastDiffResult() || null
     };
 
-    // 新建时才传名称
     if (!isUpdate) {
         data.name = caseName;
     }
 
     const url = isUpdate 
-        ? '/api/test-cases/' + window.currentTestCaseId 
+        ? '/api/test-cases/' + currentTestCaseId 
         : '/api/apis/' + apiId + '/test-cases';
     const method = isUpdate ? 'PUT' : 'POST';
 
@@ -175,12 +176,13 @@ export async function saveTestCase() {
         });
         const result = await res.json();
         if (result.success) {
-            window.currentTestCaseId = result.id || window.currentTestCaseId;
+            setCurrentTestCaseId(result.id || currentTestCaseId);
             document.getElementById('saveCaseBtn').textContent = '更新用例';
             alert(isUpdate ? '用例已更新' : '用例已保存');
-            if (window.currentGroupId) {
+            const currentGroupId = getCurrentGroupId();
+            if (currentGroupId) {
                 const { loadApis } = await import('./api.js');
-                loadApis(window.currentGroupId);
+                loadApis(currentGroupId);
             }
         } else {
             alert('保存失败: ' + (result.error || '未知错误'));
@@ -199,8 +201,8 @@ export async function deleteTestCase(tcId, btnEl) {
     if (!confirm('确定删除该用例？')) return;
     try {
         await fetch('/api/test-cases/' + tcId, { method: 'DELETE' });
-        if (window.currentTestCaseId === tcId) {
-            window.currentTestCaseId = null;
+        if (getCurrentTestCaseId() === tcId) {
+            setCurrentTestCaseId(null);
             document.getElementById('saveCaseBtn').textContent = '保存用例';
         }
         btnEl.closest('.test-case-item').remove();

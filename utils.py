@@ -1,8 +1,71 @@
 """
-工具函数模块 - 提供JSON序列化/反序列化等公共功能
+工具函数模块 - 提供JSON序列化/反序列化、输入验证等公共功能
 """
+import html
 import json
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
+
+
+def sanitize_input(value: str, max_length: int = 1000) -> str:
+    """
+    清理用户输入，防止XSS攻击
+    
+    Args:
+        value: 输入字符串
+        max_length: 最大长度限制
+    
+    Returns:
+        清理后的安全字符串
+    """
+    if not value:
+        return ''
+    value = str(value).strip()
+    if len(value) > max_length:
+        value = value[:max_length]
+    return html.escape(value)
+
+
+def validate_id(value: Any) -> Optional[int]:
+    """
+    验证ID参数
+    
+    Args:
+        value: 待验证的值
+    
+    Returns:
+        验证通过的整数ID，失败返回None
+    """
+    try:
+        id_val = int(value)
+        if id_val > 0:
+            return id_val
+    except (TypeError, ValueError):
+        pass
+    return None
+
+
+def validate_json_field(value: Any, max_depth: int = 10) -> Dict:
+    """
+    验证JSON字段
+    
+    Args:
+        value: 待验证的值
+        max_depth: 最大嵌套深度
+    
+    Returns:
+        验证后的字典
+    """
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            result = from_json(value)
+            if not isinstance(result, dict):
+                return {}
+            return result
+        except Exception:
+            return {}
+    return {}
 
 
 def to_json(obj: Any, ensure_ascii: bool = False, indent: Optional[int] = None) -> str:

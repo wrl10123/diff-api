@@ -20,7 +20,7 @@
                         <span class="flex-1">项目管理</span>
                         <div style="display:flex;gap:4px;align-items:center;">
                             <div class="sort-dropdown" >
-                                <button class="sort-btn" title="排序">⇅</button>
+                                <button class="sort-btn" title="排序" hidden>⇅</button>
                                 <div class="sort-menu">
                                     <div onclick="onSortChange('projects', 'default')">默认排序</div>
                                     <div onclick="onSortChange('projects', 'name_asc')">名称 A→Z</div>
@@ -29,9 +29,9 @@
                                     <div onclick="onSortChange('projects', 'time_asc')">最早优先</div>
                                 </div>
                             </div>
-                            <button class="btn-add" id="varManageBtn" onclick="openVariableModal()" style="display:none" title="变量管理">{ }</button>
-                            <button class="btn-add" id="envManageBtn" onclick="openEnvManageModal()" style="display:none" title="环境管理">&#127760;</button>
-                            <button class="btn-add" onclick="openProjectModal()" title="新建项目">+</button>
+                            <button class="btn-add" id="varManageBtn" data-action="open-modal" data-modal="variableModal" style="display:none" title="变量管理">{ }</button>
+                            <button class="btn-add" id="envManageBtn" data-action="open-modal" data-modal="envManageModal" style="display:none" title="环境管理">&#127760;</button>
+                            <button class="btn-add" data-action="open-modal" data-modal="projectModal" title="新建项目">+</button>
                         </div>
                     </div>
                     <div id="projectList" class="sortable-list"><div class="empty-tip">暂无项目</div></div>
@@ -82,7 +82,21 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <input type="text" id="url1" class="url-input" placeholder="环境1 URL: http://localhost:8080/api/user/info">
+                                <div class="url-row">
+                                    <input type="text" id="url1" class="url-input" placeholder="环境1 URL: http://localhost:8080/api/user/info">
+                                    <button type="button" class="btn-copy-url" onclick="copyUrl(1, this)" title="复制完整URL">📋</button>
+                                </div>
+                            </div>
+                            <!-- URL参数展示 -->
+                            <div class="form-group params-group" id="params1-group" style="display:none;">
+                                <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
+                                    <label>Params (Query)</label>
+                                    <button type="button" class="btn-toggle-mode" onclick="toggleParamsMode(1)" title="切换风格">⇄</button>
+                                </div>
+                                <div id="params1-kv-container" class="kv-container hidden">
+                                    <div class="kv-list" id="params1-kv-list"></div>
+                                </div>
+                                <textarea id="params1" class="json-textarea" readonly placeholder='{"key": "value"}'>{}</textarea>
                             </div>
                             <!-- 请求头 -->
                             <div class="form-group">
@@ -129,7 +143,21 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <input type="text" id="url2" class="url-input" placeholder="环境2 URL: http://localhost:8090/api/user/info">
+                                <div class="url-row">
+                                    <input type="text" id="url2" class="url-input" placeholder="环境2 URL: http://localhost:8090/api/user/info">
+                                    <button type="button" class="btn-copy-url" onclick="copyUrl(2, this)" title="复制完整URL">📋</button>
+                                </div>
+                            </div>
+                            <!-- URL参数展示 -->
+                            <div class="form-group params-group" id="params2-group" style="display:none;">
+                                <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
+                                    <label>Params (Query)</label>
+                                    <button type="button" class="btn-toggle-mode" onclick="toggleParamsMode(2)" title="切换风格">⇄</button>
+                                </div>
+                                <div id="params2-kv-container" class="kv-container hidden">
+                                    <div class="kv-list" id="params2-kv-list"></div>
+                                </div>
+                                <textarea id="params2" class="json-textarea" readonly placeholder='{"key": "value"}'>{}</textarea>
                             </div>
                             <!-- Header -->
                             <div class="form-group">
@@ -181,8 +209,8 @@
                     </div>
 
                     <div class="flex" style="gap:8px;">
-                        <button class="btn btn-success" onclick="executeDiff()">执行对比</button>
-                        <button class="btn btn-accent" onclick="saveTestCase()" id="saveCaseBtn">保存用例</button>
+                        <button class="btn btn-success" data-action="execute-diff">执行对比</button>
+                        <button class="btn btn-accent" data-action="save-testcase" id="saveCaseBtn">保存用例</button>
                     </div>
                 </div>
 
@@ -208,8 +236,8 @@
                 <textarea id="projectDesc"></textarea>
             </div>
             <div class="flex">
-                <button class="btn btn-primary" onclick="saveProject()">保存</button>
-                <button class="btn btn-default" onclick="closeModal('projectModal')">取消</button>
+                <button class="btn btn-primary" data-action="save-modal" data-modal="projectModal">保存</button>
+                <button class="btn btn-default" data-action="close-modal" data-modal="projectModal">取消</button>
             </div>
         </div>
     </div>
@@ -490,10 +518,11 @@
                 <textarea id="importJsonContent" style="width:100%;height:280px;font-family:monospace;font-size:12px;" placeholder='请先选择导入格式，然后粘贴JSON内容'></textarea>
             </div>
             <div class="flex">
-                <button class="btn btn-primary" onclick="importAPI()">开始导入</button>
-                <button class="btn btn-default" onclick="closeModal('importApiModal')">取消</button>
+                <button class="btn btn-primary" data-action="save-modal" data-modal="importApiModal">开始导入</button>
+                <button class="btn btn-default" data-action="close-modal" data-modal="importApiModal">取消</button>
             </div>
         </div>
+</div>
     </div>
 
     <!-- ========== 变量管理弹窗 ========== -->
@@ -539,6 +568,9 @@
         </div>
     </div>
 
+    <!-- 第三方库 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
     <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

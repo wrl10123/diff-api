@@ -5,8 +5,9 @@ import { esc } from './utils.js';
 import { openModal, closeModal } from './modal.js';
 import { currentProjectId, sortState } from './project.js';
 import { setFieldValue, getFieldValue } from './kvInput.js';
+import { getEnvDataCache, setEnvDataCache } from './state.js';
 
-// 状态
+// 本地缓存（保持兼容）
 export let envDataCache = [];
 let currentEditingEnvId = null;
 
@@ -26,8 +27,10 @@ export function openEnvManageModal() {
  */
 export async function loadEnvManageList() {
     const res = await fetch('/api/projects/' + currentProjectId + '/environments');
-    envDataCache = await res.json();
-    window.envDataCache = envDataCache;
+    const data = await res.json();
+    envDataCache = data;
+    setEnvDataCache(data);
+    window.envDataCache = data;
     
     const listEl = document.getElementById('envManageList');
     if (envDataCache.length === 0) {
@@ -41,7 +44,6 @@ export async function loadEnvManageList() {
                 <span>${esc(e.name)}</span>
             </div>
         `).join('');
-        // 默认选中第一个环境
         if (!currentEditingEnvId) {
             selectEnvForEdit(envDataCache[0].id);
         }
@@ -165,6 +167,11 @@ export async function deleteEnvFromManage() {
  * 刷新环境选择下拉框
  */
 export function refreshEnvSelects() {
+    // 从状态模块获取数据，并同步到本地缓存
+    const data = getEnvDataCache();
+    envDataCache = data;
+    window.envDataCache = data;
+    
     const opts = '<option value="">-- 手动输入URL --</option>' +
         envDataCache.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
     const sel1 = document.getElementById('env1Select');
@@ -173,15 +180,15 @@ export function refreshEnvSelects() {
     const prevVal2 = sel2.value;
     sel1.innerHTML = opts;
     sel2.innerHTML = opts;
+    
+    // 设置默认值
     if (envDataCache.length > 0) {
         if (!prevVal1) sel1.value = envDataCache[0].id;
-        if (!prevVal2 && envDataCache.length > 1) {
-            sel2.value = envDataCache[1].id;
-        } else if (!prevVal2) {
-            sel2.value = envDataCache[0].id;
+        if (!prevVal2) {
+            sel2.value = envDataCache.length > 1 ? envDataCache[1].id : envDataCache[0].id;
         }
-        onEnvChange(1);
-        onEnvChange(2);
+        onEnvChange(1, false);
+        onEnvChange(2, false);
     }
 }
 

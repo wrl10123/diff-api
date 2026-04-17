@@ -4,24 +4,28 @@
 import { esc, stripJsonComments } from './utils.js';
 import { openModal, closeModal } from './modal.js';
 import { currentProjectId, sortState } from './project.js';
-import { setFieldValue, getFieldJsonValue } from './kvInput.js';
-import { loadTestCases, toggleTestCases } from './testCase.js';
+import { setFieldValue, getFieldJsonValue, addKvRowToList } from './kvInput.js';
 import { loadFolders } from './folder.js';
 import { onEnvChange } from './environment.js';
+import {
+    getCurrentFolderId, getCurrentTestCaseId, setCurrentTestCaseId,
+    getEnvDataCache, findEnvById
+} from './state.js';
+
+// 当前API的query_params
+let currentQueryParams = {};
 
 /**
  * 打开API弹窗
- * @param {number} [id] - API ID，不传则为新建
- * @param {number} [folderId] - 目录ID（新建时使用）
  */
 export function openApiModal(id, folderId = null) {
-    const targetFolderId = folderId || window.currentFolderId;
+    const targetFolderId = folderId || getCurrentFolderId();
     if (!targetFolderId) return alert('请先选择目录');
-    
+
     document.getElementById('editApiId').value = id || '';
     document.getElementById('apiFolderId').value = targetFolderId;
     document.getElementById('apiModalTitle').textContent = id ? '编辑API' : '新建API';
-    
+
     if (id) {
         fetch('/api/apis/' + id).then(r => r.json()).then(api => {
             document.getElementById('apiName').value = api.name;
@@ -51,6 +55,7 @@ export async function saveApi() {
     const name = document.getElementById('apiName').value.trim();
     const path = document.getElementById('apiPath').value.trim();
     if (!name || !path) return alert('请输入API名称和Path');
+
     const headers = getFieldJsonValue('apiHeaders');
     const body = getFieldJsonValue('apiBody');
     const payload = {
@@ -59,10 +64,11 @@ export async function saveApi() {
         headers, body,
         description: document.getElementById('apiDesc').value.trim()
     };
+
     if (id) {
-        await fetch('/api/apis/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        await fetch('/api/apis/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     } else {
-        await fetch('/api/groups/' + folderId + '/apis', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        await fetch('/api/folders/' + folderId + '/apis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     }
     closeModal('apiModal');
     if (currentProjectId) loadFolders(currentProjectId);
@@ -76,151 +82,245 @@ export async function loadApisForDiff() {
     if (!currentProjectId) return;
     const res = await fetch('/api/projects/' + currentProjectId + '/folders');
     const folders = await res.json();
-    
-    // 递归收集所有API
-    let allApis = [];
-    function collectApis(nodes, folderName) {
-        for (const node of nodes) {
-            const currentFolderName = folderName ? folderName + ' / ' + node.name : node.name;
-            if (node.apis) {
-                allApis = allApis.concat(node.apis.map(a => ({...a, folderName: currentFolderName})));
-            }
-            if (node.children) {
-                collectApis(node.children, currentFolderName);
-            }
-        }
-    }
-    collectApis(folders);
-    
+
+    const allApis = [];
+    collectApis(folders, '', allApis);
+
     const select = document.getElementById('diffApiSelect');
     select.innerHTML = '<option value="">请选择...</option>' +
-        allApis.map(a => `<option value="${a.id}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers||'')}" data-body="${esc(a.body||'')}">[${esc(a.folderName)}] ${esc(a.name)} - ${esc(a.path)}</option>`).join('');
+        allApis.map(a => `<option value="${a.id}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers || '')}" data-body="${esc(a.body || '')}">[${esc(a.folderName)}] ${esc(a.name)} - ${esc(a.path)}</option>`).join('');
 }
 
-/**
- * API选择变更
- * @param {Object} [apiData] - 直接传入API数据（从目录树点击时使用）
- */
-export function onDiffApiChange(apiData = null) {
-    let apiPath, apiMethod, apiHeaders, apiBody;
-    
-    if (apiData) {
-        // 从目录树点击传入的数据
-        apiPath = apiData.path || '';
-        apiMethod = apiData.method || 'POST';
-        try { apiHeaders = JSON.parse(stripJsonComments(apiData.headers || '{}')); } catch(e) { apiHeaders = {}; }
-        try { apiBody = JSON.parse(stripJsonComments(apiData.body || '{}')); } catch(e) { apiBody = {}; }
-    } else {
-        // 从下拉框选择
-        const sel = document.getElementById('diffApiSelect');
-        const opt = sel.selectedOptions[0];
-        if (!opt || !opt.value) return;
-        apiPath = opt.dataset.path || '';
-        apiMethod = opt.dataset.method || 'POST';
-        try { apiHeaders = JSON.parse(stripJsonComments(opt.dataset.headers || '{}')); } catch(e) { apiHeaders = {}; }
-        try { apiBody = JSON.parse(stripJsonComments(opt.dataset.body || '{}')); } catch(e) { apiBody = {}; }
-    }
-    
-    document.getElementById('method').value = apiMethod;
-    for (const side of [1, 2]) {
-        const envHeaders = getFieldJsonValue('headers' + side);
-        const mergedHeaders = { ...envHeaders, ...apiHeaders };
-        setFieldValue('headers' + side, mergedHeaders);
-        const envBody = getFieldJsonValue('body' + side);
-        const finalBody = Object.keys(apiBody).length > 0 ? apiBody : envBody;
-        setFieldValue('body' + side, finalBody);
-    }
-    const env1Id = document.getElementById('env1Select').value;
-    const env2Id = document.getElementById('env2Select').value;
-    if (env1Id) {
-        const env = window.envDataCache?.find(e => e.id == env1Id);
-        if (env) document.getElementById('url1').value = env.base_url.replace(/[/]+$/, '') + apiPath;
-    }
-    if (env2Id) {
-        const env = window.envDataCache?.find(e => e.id == env2Id);
-        if (env) document.getElementById('url2').value = env.base_url.replace(/[/]+$/, '') + apiPath;
+function collectApis(nodes, folderName, result) {
+    for (const node of nodes) {
+        const currentFolderName = folderName ? folderName + ' / ' + node.name : node.name;
+        if (node.apis) {
+            result.push(...node.apis.map(a => ({ ...a, folderName: currentFolderName })));
+        }
+        if (node.children) {
+            collectApis(node.children, currentFolderName, result);
+        }
     }
 }
 
 /**
  * 选择API进行对比
- * @param {number} apiId - API ID
  */
 export function selectApiForDiff(apiId) {
-    // 更新下拉框选择
     document.getElementById('diffApiSelect').value = apiId;
+    setCurrentTestCaseId(null);
     window.currentTestCaseId = null;
     document.getElementById('saveCaseBtn').textContent = '保存用例';
-    
-    // 从API元素获取数据（更可靠）
+
     const apiEl = document.querySelector(`[data-api-id="${apiId}"]`);
-    if (apiEl) {
-        const nameEl = apiEl.querySelector('.api-name');
-        if (nameEl) {
-            const apiPath = nameEl.dataset.path || '';
-            const apiQueryParamsStr = nameEl.dataset.queryParams || '{}';
-            const apiMethod = nameEl.dataset.method || 'POST';
-            const apiHeadersStr = nameEl.dataset.headers || '{}';
-            const apiBodyStr = nameEl.dataset.body || '{}';
-            
-            // 解析API的headers、body和query_params
-            let apiHeaders = {};
-            let apiBody = {};
-            let apiQueryParams = {};
-            try { apiHeaders = JSON.parse(stripJsonComments(apiHeadersStr)); } catch(e) { apiHeaders = {}; }
-            try { apiBody = JSON.parse(stripJsonComments(apiBodyStr)); } catch(e) { apiBody = {}; }
-            try { apiQueryParams = JSON.parse(stripJsonComments(apiQueryParamsStr)); } catch(e) { apiQueryParams = {}; }
-            
-            // 直接更新表单
-            document.getElementById('method').value = apiMethod;
-            
-            // 更新URL - 确保path被正确拼接
-            const sel1 = document.getElementById('env1Select');
-            const sel2 = document.getElementById('env2Select');
-            
-            if (!sel1.value && window.envDataCache && window.envDataCache.length > 0) {
-                sel1.value = window.envDataCache[0].id;
-            }
-            if (!sel2.value && window.envDataCache && window.envDataCache.length > 1) {
-                sel2.value = window.envDataCache[1].id;
-            } else if (!sel2.value && window.envDataCache && window.envDataCache.length > 0) {
-                sel2.value = window.envDataCache[0].id;
-            }
-            
-            onEnvChange(1, false);
-            onEnvChange(2, false);
-            
-            for (const side of [1, 2]) {
-                const envId = document.getElementById('env' + side + 'Select').value;
-                let envHeaders = {};
-                let envBody = {};
-                
-                if (envId && window.envDataCache) {
-                    const env = window.envDataCache.find(e => e.id == envId);
-                    if (env) {
-                        try { envHeaders = JSON.parse(env.default_headers || '{}'); } catch(e) { envHeaders = {}; }
-                        try { envBody = JSON.parse(env.default_body || '{}'); } catch(e) { envBody = {}; }
-                    }
-                }
-                
-                const mergedHeaders = { ...envHeaders, ...apiHeaders };
-                const mergedBody = { ...envBody, ...apiBody };
-                
-                setFieldValue('headers' + side, mergedHeaders);
-                setFieldValue('body' + side, mergedBody);
-            }
-            return;
-        }
-    }
+    if (!apiEl) return onDiffApiChange();
+
+    const nameEl = apiEl.querySelector('.api-name');
+    if (!nameEl) return onDiffApiChange();
+
+    const apiPath = nameEl.dataset.path || '';
+    const apiMethod = nameEl.dataset.method || 'POST';
+    let apiHeaders = {}, apiBody = {}, queryParams = {};
     
-    // 回退到原来的方式
-    onDiffApiChange();
+    try { apiHeaders = JSON.parse(stripJsonComments(nameEl.dataset.headers || '{}')); } catch { }
+    try { apiBody = JSON.parse(stripJsonComments(nameEl.dataset.body || '{}')); } catch { }
+    try { queryParams = JSON.parse(stripJsonComments(nameEl.dataset.queryParams || '{}')); } catch { }
+    
+    // 保存当前query_params
+    currentQueryParams = queryParams;
+
+    document.getElementById('method').value = apiMethod;
+
+    const sel1 = document.getElementById('env1Select');
+    const sel2 = document.getElementById('env2Select');
+    const envCache = getEnvDataCache();
+
+    if (!sel1.value && envCache.length > 0) sel1.value = envCache[0].id;
+    if (!sel2.value && envCache.length > 1) sel2.value = envCache[1].id;
+    else if (!sel2.value && envCache.length > 0) sel2.value = envCache[0].id;
+
+    onEnvChange(1, false);
+    onEnvChange(2, false);
+
+    for (const side of [1, 2]) {
+        const envId = document.getElementById('env' + side + 'Select').value;
+        let envHeaders = {}, envBody = {};
+
+        if (envId) {
+            const env = findEnvById(envId);
+            if (env) {
+                try { envHeaders = JSON.parse(env.default_headers || '{}'); } catch { }
+                try { envBody = JSON.parse(env.default_body || '{}'); } catch { }
+            }
+        }
+
+        setFieldValue('headers' + side, { ...envHeaders, ...apiHeaders });
+        setFieldValue('body' + side, { ...envBody, ...apiBody });
+        
+        // 设置Params
+        updateParamsDisplay(side, queryParams);
+    }
 }
 
 /**
- * 删除API
- * @param {number} id - API ID
+ * 更新Params显示
  */
+function updateParamsDisplay(side, params) {
+    const paramsGroup = document.getElementById(`params${side}-group`);
+    const paramsTextarea = document.getElementById(`params${side}`);
+    const paramsKvList = document.getElementById(`params${side}-kv-list`);
+    
+    if (!paramsGroup || !paramsTextarea) return;
+    
+    const hasParams = params && Object.keys(params).length > 0;
+    paramsGroup.style.display = hasParams ? 'block' : 'none';
+    
+    if (hasParams) {
+        paramsTextarea.value = JSON.stringify(params, null, 2);
+        
+        if (paramsKvList) {
+            paramsKvList.innerHTML = '';
+            Object.entries(params).forEach(([key, value]) => {
+                addKvRowToList(paramsKvList, key, value);
+            });
+        }
+    }
+}
+
+/**
+ * 切换Params显示模式
+ */
+export function toggleParamsMode(side) {
+    const kvContainer = document.getElementById(`params${side}-kv-container`);
+    const jsonTextarea = document.getElementById(`params${side}`);
+    
+    if (!kvContainer || !jsonTextarea) return;
+    
+    if (kvContainer.classList.contains('hidden')) {
+        // 切换到KV模式
+        kvContainer.classList.remove('hidden');
+        jsonTextarea.classList.add('hidden');
+        
+        try {
+            const jsonObj = JSON.parse(jsonTextarea.value || '{}');
+            const kvList = kvContainer.querySelector('.kv-list');
+            kvList.innerHTML = '';
+            Object.entries(jsonObj).forEach(([key, value]) => {
+                addKvRowToList(kvList, key, value);
+            });
+        } catch (e) {
+            const kvList = kvContainer.querySelector('.kv-list');
+            kvList.innerHTML = '';
+        }
+    } else {
+        // 切换到JSON模式
+        kvContainer.classList.add('hidden');
+        jsonTextarea.classList.remove('hidden');
+        
+        const kvRows = kvContainer.querySelectorAll('.kv-row');
+        const jsonObj = {};
+        kvRows.forEach(row => {
+            const key = row.querySelector('.kv-key').value.trim();
+            const value = row.querySelector('.kv-value').value;
+            if (key) jsonObj[key] = value;
+        });
+        jsonTextarea.value = JSON.stringify(jsonObj, null, 2);
+    }
+}
+
+/**
+ * 复制完整URL（包含query params）
+ */
+export function copyUrl(side, btn) {
+    const urlInput = document.getElementById(`url${side}`);
+    let url = urlInput.value;
+    
+    // 获取params
+    const params = getParamsValue(side);
+    if (params && Object.keys(params).length > 0) {
+        const queryString = Object.entries(params)
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+            .join('&');
+        url = url + (url.includes('?') ? '&' : '?') + queryString;
+    }
+    
+    // 复制到剪贴板
+    navigator.clipboard.writeText(url).then(() => {
+        // 显示复制成功提示
+        const originalText = btn.textContent;
+        btn.textContent = '✓';
+        btn.style.color = '#28a745';
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.color = '';
+        }, 1500);
+    }).catch(err => {
+        alert('复制失败: ' + err.message);
+    });
+}
+
+/**
+ * 获取Params值
+ */
+function getParamsValue(side) {
+    const kvContainer = document.getElementById(`params${side}-kv-container`);
+    const jsonTextarea = document.getElementById(`params${side}`);
+    
+    if (kvContainer && !kvContainer.classList.contains('hidden')) {
+        const kvRows = kvContainer.querySelectorAll('.kv-row');
+        const jsonObj = {};
+        kvRows.forEach(row => {
+            const key = row.querySelector('.kv-key')?.value?.trim();
+            const value = row.querySelector('.kv-value')?.value;
+            if (key) jsonObj[key] = value;
+        });
+        return jsonObj;
+    } else if (jsonTextarea) {
+        try {
+            return JSON.parse(jsonTextarea.value || '{}');
+        } catch {
+            return {};
+        }
+    }
+    return {};
+}
+
+function onDiffApiChange(apiData = null) {
+    let apiPath, apiMethod, apiHeaders, apiBody;
+
+    if (apiData) {
+        apiPath = apiData.path || '';
+        apiMethod = apiData.method || 'POST';
+        try { apiHeaders = JSON.parse(stripJsonComments(apiData.headers || '{}')); } catch { apiHeaders = {}; }
+        try { apiBody = JSON.parse(stripJsonComments(apiData.body || '{}')); } catch { apiBody = {}; }
+    } else {
+        const opt = document.getElementById('diffApiSelect').selectedOptions[0];
+        if (!opt?.value) return;
+        apiPath = opt.dataset.path || '';
+        apiMethod = opt.dataset.method || 'POST';
+        try { apiHeaders = JSON.parse(stripJsonComments(opt.dataset.headers || '{}')); } catch { apiHeaders = {}; }
+        try { apiBody = JSON.parse(stripJsonComments(opt.dataset.body || '{}')); } catch { apiBody = {}; }
+    }
+
+    document.getElementById('method').value = apiMethod;
+    for (const side of [1, 2]) {
+        setFieldValue('headers' + side, { ...getFieldJsonValue('headers' + side), ...apiHeaders });
+        setFieldValue('body' + side, Object.keys(apiBody).length > 0 ? apiBody : getFieldJsonValue('body' + side));
+    }
+
+    const env1Id = document.getElementById('env1Select').value;
+    const env2Id = document.getElementById('env2Select').value;
+
+    if (env1Id) {
+        const env = findEnvById(env1Id);
+        if (env) document.getElementById('url1').value = env.base_url.replace(/[/]+$/, '') + apiPath;
+    }
+    if (env2Id) {
+        const env = findEnvById(env2Id);
+        if (env) document.getElementById('url2').value = env.base_url.replace(/[/]+$/, '') + apiPath;
+    }
+}
+
 export async function deleteApi(id) {
     if (!confirm('确定删除该API?')) return;
     await fetch('/api/apis/' + id, { method: 'DELETE' });
@@ -228,10 +328,10 @@ export async function deleteApi(id) {
     loadApisForDiff();
 }
 
-// 暴露到window供HTML内联事件使用
 window.openApiModal = openApiModal;
 window.saveApi = saveApi;
 window.deleteApi = deleteApi;
 window.selectApiForDiff = selectApiForDiff;
 window.onDiffApiChange = onDiffApiChange;
-window.toggleTestCases = toggleTestCases;
+window.copyUrl = copyUrl;
+window.toggleParamsMode = toggleParamsMode;

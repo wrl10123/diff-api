@@ -7,10 +7,13 @@ import { makeSortable } from './sortable.js';
 import { loadFolders } from './folder.js';
 import { loadApisForDiff } from './api.js';
 import { loadVariables } from './variable.js';
+import { setCurrentProjectId, setCurrentGroupId } from './state.js';
 
-// 状态
-export let currentProjectId = null;
+// 排序状态
 export const sortState = { projects: 'default', environments: 'default', folders: 'default', apis: 'default' };
+
+// 当前项目ID（保持导出兼容）
+export let currentProjectId = null;
 
 /**
  * 打开项目弹窗
@@ -85,7 +88,8 @@ export async function loadProjects() {
  */
 export async function selectProject(projectId) {
     currentProjectId = projectId;
-    window.currentGroupId = null;
+    setCurrentProjectId(projectId);
+    setCurrentGroupId(null);
     document.querySelectorAll('#projectList .tree-item').forEach(el => el.classList.remove('active'));
     const el = document.getElementById('project-' + projectId);
     if (el) el.classList.add('active');
@@ -98,7 +102,6 @@ export async function selectProject(projectId) {
     const addApiBtn = document.getElementById('addApiBtn');
     if (addApiBtn) addApiBtn.style.display = 'none';
     
-    // 先加载环境数据，确保下拉框有选项
     await loadEnvironmentsForProject(projectId);
     
     await Promise.all([
@@ -116,13 +119,9 @@ async function loadEnvironmentsForProject(projectId) {
     try {
         const res = await fetch('/api/projects/' + projectId + '/environments');
         const envData = await res.json();
-        // 更新环境缓存
-        const { envDataCache } = await import('./environment.js');
-        envDataCache.length = 0;
-        envDataCache.push(...envData);
-        window.envDataCache = envDataCache;
+        const { setEnvDataCache } = await import('./state.js');
+        setEnvDataCache(envData);
         
-        // 刷新下拉框
         const { refreshEnvSelects } = await import('./environment.js');
         refreshEnvSelects();
     } catch (e) {
@@ -138,7 +137,8 @@ export async function deleteProject(id) {
     if (!confirm('确定删除该项目及其所有分组、API和环境?')) return;
     await fetch('/api/projects/' + id, { method: 'DELETE' });
     currentProjectId = null;
-    window.currentGroupId = null;
+    setCurrentProjectId(null);
+    setCurrentGroupId(null);
     document.getElementById('folderTree').innerHTML = '<div class="empty-tip">请先选择项目</div>';
     document.getElementById('varManageBtn').style.display = 'none';
     document.getElementById('envManageBtn').style.display = 'none';
