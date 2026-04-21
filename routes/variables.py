@@ -23,7 +23,7 @@ def create_variable(project_id: int) -> Response:
     if not name:
         return jsonify({'success': False, 'error': '变量名不能为空'}), 400
     
-    value: str = sanitize_input(data.get('value', ''), max_length=1000)
+    value: str = data.get('value', '')
     description: str = sanitize_input(data.get('description', ''), max_length=200)
     
     var: Variable = Variable(
@@ -45,7 +45,7 @@ def update_variable(var_id: int) -> Response:
     if 'name' in data:
         var.name = sanitize_input(data['name'], max_length=50)
     if 'value' in data:
-        var.value = sanitize_input(data['value'], max_length=1000)
+        var.value = data['value']
     if 'description' in data:
         var.description = sanitize_input(data['description'], max_length=200)
     db.session.commit()

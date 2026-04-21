@@ -4,8 +4,10 @@
 import os
 import time
 import logging
-from logging.handlers import RotatingFileHandler
+from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 from flask import request, g, jsonify
+from werkzeug.exceptions import HTTPException
 
 
 def setup_logging(app):
@@ -13,20 +15,29 @@ def setup_logging(app):
     log_level = logging.DEBUG if app.debug else logging.INFO
     
     # 日志目录
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
     # 清除现有处理器
     app.logger.handlers.clear()
     
-    # 文件处理器 - 按大小轮转
-    file_handler = RotatingFileHandler(
-        os.path.join(log_dir, 'app.log'),
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
+    # 日志文件路径
+    log_file = os.path.join(log_dir, f'app-{datetime.now().strftime("%Y-%m-%d")}.log')
+    
+    # 确保文件存在
+    if not os.path.exists(log_file):
+        open(log_file, 'w', encoding='utf-8').close()
+    
+    # 文件处理器 - 按日期命名
+    file_handler = TimedRotatingFileHandler(
+        log_file,
+        when='midnight',
+        interval=1,
+        backupCount=30,
         encoding='utf-8'
     )
+    file_handler.suffix = '%Y-%m-%d.log'
     file_handler.setLevel(log_level)
     file_handler.setFormatter(logging.Formatter(
         '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
@@ -44,16 +55,23 @@ def setup_logging(app):
     app.logger.addHandler(console_handler)
     app.logger.setLevel(log_level)
     
+    # 配置 SQLAlchemy SQL 日志输出到文件
+    sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+    sqlalchemy_logger.handlers.clear()
+    sqlalchemy_logger.addHandler(file_handler)
+    sqlalchemy_logger.setLevel(logging.INFO)
+    sqlalchemy_logger.propagate = False
+    
     # 请求日志中间件
     @app.before_request
     def before_request():
-        if not request.path.startswith('/static'):
+        if not request.path.startswith('/static') and not request.path.startswith('/@') and request.path != '/favicon.ico':
             g.start_time = time.time()
             app.logger.debug(f'--> {request.method} {request.path}')
     
     @app.after_request
     def after_request(response):
-        if not request.path.startswith('/static'):
+        if not request.path.startswith('/static') and not request.path.startswith('/@') and request.path != '/favicon.ico':
             duration = time.time() - g.get('start_time', time.time())
             app.logger.debug(f'<-- {request.method} {request.path} {response.status_code} ({duration*1000:.0f}ms)')
         return response
@@ -61,6 +79,10 @@ def setup_logging(app):
     # 全局异常处理
     @app.errorhandler(Exception)
     def handle_exception(e):
+        if request.path.startswith('/@'):
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        if isinstance(e, HTTPException):
+            return e
         app.logger.error(f'Unhandled exception: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': '服务器内部错误'}), 500
     

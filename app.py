@@ -17,10 +17,10 @@ config = get_config()
 app = Flask(__name__)
 app.config.from_object(config)
 
+setup_logging(app)
+
 db.init_app(app)
 migrate = Migrate(app, db)
-
-setup_logging(app)
 
 register_blueprints(app)
 
@@ -29,6 +29,12 @@ register_blueprints(app)
 def index():
     """首页"""
     return render_template('index.html')
+
+
+@app.route('/favicon.ico')
+def favicon():
+    """返回 favicon"""
+    return '', 204
 
 
 @app.route('/api/db/migrate', methods=['POST'])
