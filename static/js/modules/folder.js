@@ -11,6 +11,17 @@ import {
     getCurrentFolderId, setCurrentFolderId,
     getFolderExpandState, setFolderExpandState, hasFolderExpandState, getFolderExpandStateById
 } from './state.js';
+import { initTracker, markClean, updateButton } from './dirtyTracker.js';
+
+const TRACKER_ID = 'folder';
+const BTN_ID = 'folderSaveBtn';
+
+const getFolderValues = () => ({
+    name: document.getElementById('folderName').value,
+    description: document.getElementById('folderDesc').value
+});
+
+const FOLDER_FIELDS = ['folderName', 'folderDesc'];
 
 /**
  * 打开目录弹窗
@@ -29,6 +40,19 @@ export function openFolderModal(id, parentId = null) {
         document.getElementById('folderDesc').value = '';
     }
     openModal('folderModal');
+    
+    initTracker(TRACKER_ID, getFolderValues);
+    setupFolderListeners();
+    updateButton(BTN_ID, TRACKER_ID);
+}
+
+function setupFolderListeners() {
+    FOLDER_FIELDS.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el) {
+            el.oninput = () => updateButton(BTN_ID, TRACKER_ID);
+        }
+    });
 }
 
 /**

@@ -7,6 +7,22 @@ import { renderDiffResult } from './diff.js';
 import { makeSortable } from './sortable.js';
 import { onEnvChange } from './environment.js';
 import { setCurrentTestCaseId, getCurrentTestCaseId, getLastDiffResult, getCurrentGroupId } from './state.js';
+import { initTracker, markClean, updateButton } from './dirtyTracker.js';
+
+const TRACKER_ID = 'testCase';
+const BTN_ID = 'saveCaseBtn';
+
+const getTestCaseValues = () => ({
+    env1_id: document.getElementById('env1Select').value,
+    env2_id: document.getElementById('env2Select').value,
+    url1: document.getElementById('url1').value,
+    url2: document.getElementById('url2').value,
+    method: document.getElementById('method').value,
+    headers1: getFieldJsonValue('headers1'),
+    headers2: getFieldJsonValue('headers2'),
+    body1: getFieldJsonValue('body1'),
+    body2: getFieldJsonValue('body2')
+});
 
 // 状态
 export const _testCaseCache = {};
@@ -124,6 +140,42 @@ export function applyTestCase(tc) {
     document.querySelectorAll('.test-case-item').forEach(el => el.classList.remove('active'));
     const activeEl = document.querySelector(`.test-case-item[data-tc-id="${tc.id}"]`);
     if (activeEl) activeEl.classList.add('active');
+    
+    initTracker(TRACKER_ID, getTestCaseValues);
+    setupTestCaseListeners();
+    updateButton(BTN_ID, TRACKER_ID);
+}
+
+export function setupTestCaseListeners() {
+    ['env1Select', 'env2Select', 'url1', 'url2', 'method'].forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el) {
+            el.oninput = () => updateButton(BTN_ID, TRACKER_ID);
+            el.onchange = () => updateButton(BTN_ID, TRACKER_ID);
+        }
+    });
+    
+    ['headers1', 'headers2', 'body1', 'body2'].forEach(fieldId => {
+        const kvContainer = document.getElementById(fieldId + '-kv-container');
+        const jsonTextarea = document.getElementById(fieldId);
+        
+        if (kvContainer) {
+            kvContainer.oninput = (e) => {
+                if (e.target.classList.contains('kv-key') || e.target.classList.contains('kv-value')) {
+                    updateButton(BTN_ID, TRACKER_ID);
+                }
+            };
+        }
+        if (jsonTextarea) {
+            jsonTextarea.oninput = () => updateButton(BTN_ID, TRACKER_ID);
+        }
+    });
+}
+
+export function initTestCaseTracker() {
+    initTracker(TRACKER_ID, getTestCaseValues);
+    setupTestCaseListeners();
+    updateButton(BTN_ID, TRACKER_ID);
 }
 
 /**
@@ -178,7 +230,9 @@ export async function saveTestCase() {
         if (result.success) {
             setCurrentTestCaseId(result.id || currentTestCaseId);
             document.getElementById('saveCaseBtn').textContent = '更新用例';
-            alert(isUpdate ? '用例已更新' : '用例已保存');
+            if (!isUpdate) alert('用例已保存');
+            markClean(TRACKER_ID);
+            updateButton(BTN_ID, TRACKER_ID);
             const currentGroupId = getCurrentGroupId();
             if (currentGroupId) {
                 const { loadApis } = await import('./api.js');

@@ -4,6 +4,18 @@
 import { esc, escapeRegExp } from './utils.js';
 import { openModal, closeModal } from './modal.js';
 import { currentProjectId } from './project.js';
+import { initTracker, markClean, updateButton, setupInputListeners } from './dirtyTracker.js';
+
+const TRACKER_ID = 'variable';
+const BTN_ID = 'varSaveBtn';
+
+const getVariableValues = () => ({
+    name: document.getElementById('varName').value,
+    value: document.getElementById('varValue').value,
+    description: document.getElementById('varDesc').value
+});
+
+const VAR_FIELDS = ['varName', 'varValue', 'varDesc'];
 
 // 状态
 let variableCache = [];
@@ -71,6 +83,10 @@ export function selectVariable(varId) {
     document.getElementById('deleteVarBtn').style.display = 'inline-block';
     showVariableEditForm(true);
     renderVariableList();
+    
+    initTracker(TRACKER_ID, getVariableValues);
+    setupInputListeners(TRACKER_ID, BTN_ID, VAR_FIELDS);
+    updateButton(BTN_ID, TRACKER_ID);
 }
 
 /**
@@ -84,6 +100,10 @@ export function newVariable() {
     document.getElementById('deleteVarBtn').style.display = 'none';
     showVariableEditForm(true);
     renderVariableList();
+    
+    initTracker(TRACKER_ID, getVariableValues);
+    setupInputListeners(TRACKER_ID, BTN_ID, VAR_FIELDS);
+    updateButton(BTN_ID, TRACKER_ID);
 }
 
 /**
@@ -135,7 +155,8 @@ export async function saveVariable() {
                 document.getElementById('deleteVarBtn').style.display = 'inline-block';
             }
             renderVariableList();
-            // 静默保存，不弹提示
+            markClean(TRACKER_ID);
+            updateButton(BTN_ID, TRACKER_ID);
         } else {
             alert('保存失败: ' + (result.error || '未知错误'));
         }

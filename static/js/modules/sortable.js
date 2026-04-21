@@ -83,6 +83,14 @@ function getSortableConfig(type, container) {
                 onEnd: (evt) => saveOrder('testCases', getIdsFromContainer(evt.from, 'testCase'))
             };
             
+        case 'environments':
+            return {
+                ...baseConfig,
+                filter: '.empty-tip',
+                draggable: '.env-item',
+                onEnd: (evt) => saveOrder('environments', getIdsFromContainer(evt.from, 'environment'))
+            };
+            
         default:
             return baseConfig;
     }
@@ -129,7 +137,8 @@ function getIdsFromContainer(container, type) {
         project: '.project-item',
         folder: '.folder-item',
         api: '.api-item',
-        testCase: '.test-case-item'
+        testCase: '.test-case-item',
+        environment: '.env-item'
     }[type];
     
     return Array.from(container.querySelectorAll(selector))
@@ -137,6 +146,9 @@ function getIdsFromContainer(container, type) {
             if (type === 'project') {
                 const id = el.id.replace('project-', '');
                 return parseInt(id);
+            }
+            if (type === 'environment') {
+                return parseInt(el.dataset.envId);
             }
             return parseInt(el.dataset.folderId || el.dataset.apiId || el.dataset.tcId);
         })
@@ -151,7 +163,8 @@ async function saveOrder(type, ids) {
         projects: '/api/projects/reorder',
         folders: '/api/folders/reorder',
         apis: '/api/apis/reorder',
-        testCases: '/api/test-cases/reorder'
+        testCases: '/api/test-cases/reorder',
+        environments: '/api/environments/reorder'
     };
     
     const endpoint = endpoints[type];

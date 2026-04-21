@@ -11,17 +11,31 @@ import {
     getCurrentFolderId, getCurrentTestCaseId, setCurrentTestCaseId,
     getEnvDataCache, findEnvById
 } from './state.js';
+import { initTracker, markClean, updateButton } from './dirtyTracker.js';
+import { initTestCaseTracker } from './testCase.js';
 
-// 当前API的query_params
+const TRACKER_ID = 'api';
+const BTN_ID = 'apiSaveBtn';
+
+const API_FIELDS = ['apiName', 'apiPath', 'apiMethod', 'apiDesc'];
+
+let currentApiId = null;
 let currentQueryParams = {};
 
-/**
- * 打开API弹窗
- */
+const getApiValues = () => ({
+    name: document.getElementById('apiName').value,
+    path: document.getElementById('apiPath').value,
+    method: document.getElementById('apiMethod').value,
+    headers: getFieldJsonValue('apiHeaders'),
+    body: getFieldJsonValue('apiBody'),
+    description: document.getElementById('apiDesc').value
+});
+
 export function openApiModal(id, folderId = null) {
     const targetFolderId = folderId || getCurrentFolderId();
     if (!targetFolderId) return alert('请先选择目录');
 
+    currentApiId = id;
     document.getElementById('editApiId').value = id || '';
     document.getElementById('apiFolderId').value = targetFolderId;
     document.getElementById('apiModalTitle').textContent = id ? '编辑API' : '新建API';
@@ -34,6 +48,10 @@ export function openApiModal(id, folderId = null) {
             setFieldValue('apiHeaders', api.headers || '{}');
             setFieldValue('apiBody', api.body || '{}');
             document.getElementById('apiDesc').value = api.description || '';
+            
+            initTracker(TRACKER_ID, getApiValues);
+            setupApiListeners();
+            updateButton(BTN_ID, TRACKER_ID);
         });
     } else {
         document.getElementById('apiName').value = '';
@@ -42,8 +60,38 @@ export function openApiModal(id, folderId = null) {
         setFieldValue('apiHeaders', '{}');
         setFieldValue('apiBody', '{}');
         document.getElementById('apiDesc').value = '';
+        
+        initTracker(TRACKER_ID, getApiValues);
+        setupApiListeners();
+        updateButton(BTN_ID, TRACKER_ID);
     }
     openModal('apiModal');
+}
+
+function setupApiListeners() {
+    API_FIELDS.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el) {
+            el.oninput = () => updateButton(BTN_ID, TRACKER_ID);
+            el.onchange = () => updateButton(BTN_ID, TRACKER_ID);
+        }
+    });
+    
+    ['apiHeaders', 'apiBody'].forEach(fieldId => {
+        const kvContainer = document.getElementById(fieldId + '-kv-container');
+        const jsonTextarea = document.getElementById(fieldId);
+        
+        if (kvContainer) {
+            kvContainer.oninput = (e) => {
+                if (e.target.classList.contains('kv-key') || e.target.classList.contains('kv-value')) {
+                    updateButton(BTN_ID, TRACKER_ID);
+                }
+            };
+        }
+        if (jsonTextarea) {
+            jsonTextarea.oninput = () => updateButton(BTN_ID, TRACKER_ID);
+        }
+    });
 }
 
 /**
@@ -126,7 +174,6 @@ export function selectApiForDiff(apiId) {
     try { apiBody = JSON.parse(stripJsonComments(nameEl.dataset.body || '{}')); } catch { }
     try { queryParams = JSON.parse(stripJsonComments(nameEl.dataset.queryParams || '{}')); } catch { }
     
-    // 保存当前query_params
     currentQueryParams = queryParams;
 
     document.getElementById('method').value = apiMethod;
@@ -157,9 +204,10 @@ export function selectApiForDiff(apiId) {
         setFieldValue('headers' + side, { ...envHeaders, ...apiHeaders });
         setFieldValue('body' + side, { ...envBody, ...apiBody });
         
-        // 设置Params
         updateParamsDisplay(side, queryParams);
     }
+    
+    initTestCaseTracker();
 }
 
 /**

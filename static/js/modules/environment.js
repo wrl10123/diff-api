@@ -6,6 +6,21 @@ import { openModal, closeModal } from './modal.js';
 import { currentProjectId, sortState } from './project.js';
 import { setFieldValue, getFieldValue } from './kvInput.js';
 import { getEnvDataCache, setEnvDataCache } from './state.js';
+import { initTracker, markClean, updateButton } from './dirtyTracker.js';
+import { makeSortable } from './sortable.js';
+
+const TRACKER_ID = 'environment';
+const BTN_ID = 'envSaveBtn';
+
+const ENV_FIELDS = ['manageEnvName', 'manageEnvBaseUrl', 'manageEnvDesc'];
+
+const getEnvValues = () => ({
+    name: document.getElementById('manageEnvName').value,
+    base_url: document.getElementById('manageEnvBaseUrl').value,
+    default_headers: getFieldValue('manageEnvDefaultHeaders'),
+    default_body: getFieldValue('manageEnvDefaultBody'),
+    description: document.getElementById('manageEnvDesc').value
+});
 
 // 本地缓存（保持兼容）
 export let envDataCache = [];
@@ -41,9 +56,11 @@ export async function loadEnvManageList() {
             <div class="env-item ${currentEditingEnvId == e.id ? 'active' : ''}" 
                  onclick="selectEnvForEdit(${e.id})" 
                  data-env-id="${e.id}">
-                <span>${esc(e.name)}</span>
+                <span class="env-item-name">${esc(e.name)}</span>
+                <span class="env-item-copy" onclick="event.stopPropagation();copyEnvironment(${e.id})" title="复制">📋</span>
             </div>
         `).join('');
+        makeSortable(listEl, 'environments');
         if (!currentEditingEnvId) {
             selectEnvForEdit(envDataCache[0].id);
         }
@@ -57,17 +74,14 @@ export async function loadEnvManageList() {
 export function selectEnvForEdit(envId) {
     currentEditingEnvId = envId;
     
-    // 更新列表选中状态
     document.querySelectorAll('.env-item').forEach(el => {
         el.classList.toggle('active', el.dataset.envId == envId);
     });
     
-    // 显示编辑表单
     document.getElementById('envEditForm').style.display = 'block';
     document.getElementById('envEditEmpty').style.display = 'none';
     
     if (envId) {
-        // 编辑模式
         const env = envDataCache.find(e => e.id == envId);
         if (!env) return;
         
@@ -80,7 +94,6 @@ export function selectEnvForEdit(envId) {
         document.getElementById('manageEnvDesc').value = env.description || '';
         document.getElementById('deleteEnvBtn').style.display = 'inline-block';
     } else {
-        // 新增模式
         document.getElementById('envEditHeader').textContent = '新增环境';
         document.getElementById('manageEditEnvId').value = '';
         document.getElementById('manageEnvName').value = '';
@@ -90,6 +103,35 @@ export function selectEnvForEdit(envId) {
         document.getElementById('manageEnvDesc').value = '';
         document.getElementById('deleteEnvBtn').style.display = 'none';
     }
+    
+    initTracker(TRACKER_ID, getEnvValues);
+    setupEnvChangeListeners();
+    updateButton(BTN_ID, TRACKER_ID);
+}
+
+function setupEnvChangeListeners() {
+    ENV_FIELDS.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el) {
+            el.oninput = () => updateButton(BTN_ID, TRACKER_ID);
+        }
+    });
+    
+    ['manageEnvDefaultHeaders', 'manageEnvDefaultBody'].forEach(fieldId => {
+        const kvContainer = document.getElementById(fieldId + '-kv-container');
+        const jsonTextarea = document.getElementById(fieldId);
+        
+        if (kvContainer) {
+            kvContainer.oninput = (e) => {
+                if (e.target.classList.contains('kv-key') || e.target.classList.contains('kv-value')) {
+                    updateButton(BTN_ID, TRACKER_ID);
+                }
+            };
+        }
+        if (jsonTextarea) {
+            jsonTextarea.oninput = () => updateButton(BTN_ID, TRACKER_ID);
+        }
+    });
 }
 
 /**
@@ -135,10 +177,10 @@ export async function saveEnvFromManage() {
             });
         }
         
-        // 重新加载列表
         await loadEnvManageList();
-        // 刷新下拉框
         refreshEnvSelects();
+        markClean(TRACKER_ID);
+        updateButton(BTN_ID, TRACKER_ID);
     } catch (err) {
         alert('保存失败: ' + err.message);
     }
@@ -160,6 +202,37 @@ export async function deleteEnvFromManage() {
         showEnvEditEmpty();
     } catch (err) {
         alert('删除失败: ' + err.message);
+    }
+}
+
+export async function copyEnvironment(envId) {
+    const env = envDataCache.find(e => e.id == envId);
+    if (!env) return;
+    
+    const payload = {
+        name: env.name + '-copy',
+        base_url: env.base_url,
+        default_headers: env.default_headers || '{}',
+        default_body: env.default_body || '{}',
+        description: env.description || ''
+    };
+    
+    try {
+        const res = await fetch('/api/projects/' + currentProjectId + '/environments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (result.success) {
+            await loadEnvManageList();
+            refreshEnvSelects();
+            selectEnvForEdit(result.id);
+        } else {
+            alert('复制失败: ' + (result.error || '未知错误'));
+        }
+    } catch (err) {
+        alert('复制失败: ' + err.message);
     }
 }
 
@@ -219,4 +292,5 @@ window.openEnvManageModal = openEnvManageModal;
 window.selectEnvForEdit = selectEnvForEdit;
 window.saveEnvFromManage = saveEnvFromManage;
 window.deleteEnvFromManage = deleteEnvFromManage;
+window.copyEnvironment = copyEnvironment;
 window.onEnvChange = onEnvChange;
