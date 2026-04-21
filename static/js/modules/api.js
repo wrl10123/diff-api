@@ -121,6 +121,8 @@ export async function saveApi() {
     closeModal('apiModal');
     if (currentProjectId) loadFolders(currentProjectId);
     loadApisForDiff();
+    markClean(TRACKER_ID);
+    updateButton(BTN_ID, TRACKER_ID);
 }
 
 /**

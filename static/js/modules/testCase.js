@@ -271,3 +271,4 @@ export async function deleteTestCase(tcId, btnEl) {
 window.applyTestCaseById = applyTestCaseById;
 window.saveTestCase = saveTestCase;
 window.deleteTestCase = deleteTestCase;
+window.initTestCaseTracker = initTestCaseTracker;

@@ -75,6 +75,8 @@ export async function saveFolder() {
     closeModal('folderModal');
     loadFolders(currentProjectId);
     loadApisForDiff();
+    markClean(TRACKER_ID);
+    updateButton(BTN_ID, TRACKER_ID);
 }
 
 /**
