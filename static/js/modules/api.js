@@ -161,6 +161,9 @@ export function selectApiForDiff(apiId) {
     setCurrentTestCaseId(null);
     window.currentTestCaseId = null;
     document.getElementById('saveCaseBtn').textContent = '保存用例';
+    
+    // 清空对比结果
+    document.getElementById('diffResult').innerHTML = '';
 
     const apiEl = document.querySelector(`[data-api-id="${apiId}"]`);
     if (!apiEl) return onDiffApiChange();
