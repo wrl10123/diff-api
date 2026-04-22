@@ -136,9 +136,23 @@ export async function loadApisForDiff() {
     const allApis = [];
     collectApis(folders, '', allApis);
 
-    const select = document.getElementById('diffApiSelect');
-    select.innerHTML = '<option value="">请选择...</option>' +
-        allApis.map(a => `<option value="${a.id}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers || '')}" data-body="${esc(a.body || '')}">[${esc(a.folderName)}] ${esc(a.name)} - ${esc(a.path)}</option>`).join('');
+    // 更新自定义下拉框
+    const menu = document.getElementById('diffApiMenu');
+    if (menu) {
+        menu.innerHTML = '<div class="custom-dropdown-option" data-value="">请选择...</div>' +
+            allApis.map(a => `<div class="custom-dropdown-option" data-value="${a.id}" data-path="${esc(a.path)}" data-method="${esc(a.method)}" data-headers="${esc(a.headers || '')}" data-body="${esc(a.body || '')}">[${esc(a.folderName)}] ${esc(a.name)} - ${esc(a.path)}</div>`).join('');
+    }
+    
+    // 保留隐藏的 select 用于存储值
+    const hiddenInput = document.getElementById('diffApiSelect');
+    if (hiddenInput) hiddenInput.value = '';
+    
+    // 重置显示文本
+    const textEl = document.querySelector('#diffApiToggle .custom-dropdown-text');
+    if (textEl) {
+        textEl.textContent = '请选择...';
+        textEl.classList.remove('has-value');
+    }
 }
 
 function collectApis(nodes, folderName, result) {
@@ -157,7 +171,23 @@ function collectApis(nodes, folderName, result) {
  * 选择API进行对比
  */
 export function selectApiForDiff(apiId) {
-    document.getElementById('diffApiSelect').value = apiId;
+    // 更新隐藏 input 值
+    const hiddenInput = document.getElementById('diffApiSelect');
+    if (hiddenInput) hiddenInput.value = apiId;
+    
+    // 更新自定义下拉框显示
+    const selectedOption = document.querySelector(`#diffApiMenu .custom-dropdown-option[data-value="${apiId}"]`);
+    if (selectedOption) {
+        const textEl = document.querySelector('#diffApiToggle .custom-dropdown-text');
+        if (textEl) {
+            textEl.textContent = selectedOption.textContent;
+            textEl.classList.add('has-value');
+        }
+        // 更新选中状态
+        document.querySelectorAll('#diffApiMenu .custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
+        selectedOption.classList.add('selected');
+    }
+    
     setCurrentTestCaseId(null);
     window.currentTestCaseId = null;
     document.getElementById('saveCaseBtn').textContent = '保存用例';
@@ -181,6 +211,12 @@ export function selectApiForDiff(apiId) {
     
     currentQueryParams = queryParams;
 
+    // 更新请求方法下拉框
+    const methodBadge = document.querySelector(`#methodToggle .method-badge`);
+    if (methodBadge) {
+        methodBadge.className = `method-badge method-badge-${apiMethod}`;
+        methodBadge.textContent = apiMethod;
+    }
     document.getElementById('method').value = apiMethod;
 
     const sel1 = document.getElementById('env1Select');
@@ -306,15 +342,28 @@ function onDiffApiChange(apiData = null) {
         try { apiHeaders = JSON.parse(stripJsonComments(apiData.headers || '{}')); } catch { apiHeaders = {}; }
         try { apiBody = JSON.parse(stripJsonComments(apiData.body || '{}')); } catch { apiBody = {}; }
     } else {
-        const opt = document.getElementById('diffApiSelect').selectedOptions[0];
-        if (!opt?.value) return;
-        apiPath = opt.dataset.path || '';
-        apiMethod = opt.dataset.method || 'POST';
-        try { apiHeaders = JSON.parse(stripJsonComments(opt.dataset.headers || '{}')); } catch { apiHeaders = {}; }
-        try { apiBody = JSON.parse(stripJsonComments(opt.dataset.body || '{}')); } catch { apiBody = {}; }
+        const hiddenInput = document.getElementById('diffApiSelect');
+        const selectedValue = hiddenInput?.value;
+        if (!selectedValue) return;
+        
+        // 从自定义下拉框的选中选项获取数据
+        const selectedOption = document.querySelector(`#diffApiMenu .custom-dropdown-option[data-value="${selectedValue}"]`);
+        if (!selectedOption) return;
+        
+        apiPath = selectedOption.dataset.path || '';
+        apiMethod = selectedOption.dataset.method || 'POST';
+        try { apiHeaders = JSON.parse(stripJsonComments(selectedOption.dataset.headers || '{}')); } catch { apiHeaders = {}; }
+        try { apiBody = JSON.parse(stripJsonComments(selectedOption.dataset.body || '{}')); } catch { apiBody = {}; }
     }
 
+    // 更新请求方法下拉框显示
+    const methodBadge = document.querySelector(`#methodToggle .method-badge`);
+    if (methodBadge) {
+        methodBadge.className = `method-badge method-badge-${apiMethod}`;
+        methodBadge.textContent = apiMethod;
+    }
     document.getElementById('method').value = apiMethod;
+    
     for (const side of [1, 2]) {
         setFieldValue('headers' + side, { ...getFieldJsonValue('headers' + side), ...apiHeaders });
         setFieldValue('body' + side, Object.keys(apiBody).length > 0 ? apiBody : getFieldJsonValue('body' + side));

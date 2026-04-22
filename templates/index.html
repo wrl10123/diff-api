@@ -100,9 +100,16 @@
                 </div>
                 <!-- 选择API -->
                 <div style="flex: 1;">
-                    <select id="diffApiSelect" class="api-select" onchange="onDiffApiChange()" style="width: 100%;">
-                        <option value="">请选择...</option>
-                    </select>
+                    <div class="custom-dropdown" id="diffApiDropdown">
+                        <div class="custom-dropdown-toggle" id="diffApiToggle">
+                            <span class="custom-dropdown-text">请选择...</span>
+                            <span class="custom-dropdown-arrow">▼</span>
+                        </div>
+                        <div class="custom-dropdown-menu" id="diffApiMenu">
+                            <div class="custom-dropdown-option" data-value="">请选择...</div>
+                        </div>
+                        <input type="hidden" id="diffApiSelect" value="">
+                    </div>
                 </div>
                 </div>
 
@@ -111,10 +118,17 @@
                     <div>
                         <!-- env1 -->
                         <div class="form-group">
-                            <label>env1</label>
-                            <select id="env1Select" onchange="onEnvChange(1)">
-                                <option value="">-- 手动输入URL --</option>
-                            </select>
+                            <label>环境1</label>
+                            <div class="custom-dropdown" id="env1Dropdown">
+                                <div class="custom-dropdown-toggle" id="env1Toggle">
+                                    <span class="custom-dropdown-text">-- 手动输入URL --</span>
+                                    <span class="custom-dropdown-arrow">▼</span>
+                                </div>
+                                <div class="custom-dropdown-menu" id="env1Menu">
+                                    <div class="custom-dropdown-option" data-value="">-- 手动输入URL --</div>
+                                </div>
+                                <input type="hidden" id="env1Select" value="">
+                            </div>
                         </div>
                         <div class="form-group">
                             <div class="url-row">
@@ -203,12 +217,19 @@
                     </div>
                     <!-- 右侧 -->
                     <div>
-                        <!-- env22 -->
+                        <!-- env2 -->
                         <div class="form-group">
-                            <label>env2</label>
-                            <select id="env2Select" onchange="onEnvChange(2)">
-                                <option value="">-- 手动输入URL --</option>
-                            </select>
+                            <label>环境2</label>
+                            <div class="custom-dropdown" id="env2Dropdown">
+                                <div class="custom-dropdown-toggle" id="env2Toggle">
+                                    <span class="custom-dropdown-text">-- 手动输入URL --</span>
+                                    <span class="custom-dropdown-arrow">▼</span>
+                                </div>
+                                <div class="custom-dropdown-menu" id="env2Menu">
+                                    <div class="custom-dropdown-option" data-value="">-- 手动输入URL --</div>
+                                </div>
+                                <input type="hidden" id="env2Select" value="">
+                            </div>
                         </div>
                         <div class="form-group">
                             <div class="url-row">

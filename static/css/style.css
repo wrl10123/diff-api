@@ -30,6 +30,79 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     font-size: 14px;
     height: 40px;
 }
+
+/* 自定义下拉框 */
+.custom-dropdown {
+    position: relative;
+    width: 100%;
+}
+.custom-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    min-height: 40px;
+    font-size: 14px;
+}
+.custom-dropdown-toggle:hover {
+    border-color: #007bff;
+}
+.custom-dropdown-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #888;
+}
+.custom-dropdown-text.has-value {
+    color: #333;
+}
+.custom-dropdown-arrow {
+    font-size: 10px;
+    color: #666;
+    margin-left: 8px;
+}
+.custom-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.custom-dropdown-menu.show {
+    display: block;
+}
+.custom-dropdown-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #888;
+    border-radius: 4px;
+    margin: 2px;
+}
+.custom-dropdown-option:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+.custom-dropdown-option.selected {
+    background: #e8f4fc;
+    color: #007bff;
+}
+.custom-dropdown-option[data-value=""] {
+    color: #aaa;
+}
 .api-select option { color: #888; }
 .api-select option:checked { color: #333; }
 
@@ -338,7 +411,7 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
 
 /* 主布局 - 左右分栏 */
 .main-layout { display: flex; gap: 20px; }
-.sidebar { width: 20%; min-width: 300px; max-width: 500px; flex-shrink: 0; }
+.sidebar { width: 28%; min-width: 300px; max-width: 500px; flex-shrink: 0; }
 .main-content { flex: 1; min-width: 0; }
 
 /* 拖拽分隔条 */

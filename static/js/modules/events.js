@@ -16,6 +16,11 @@ import { toggleInputMode, addKvRow } from './kvInput.js';
 import { executeDiff } from './diff.js';
 import { toggleTestCases, saveTestCase } from './testCase.js';
 
+// 关闭所有自定义下拉框
+function closeAllCustomDropdowns() {
+    document.querySelectorAll('.custom-dropdown-menu.show').forEach(menu => menu.classList.remove('show'));
+}
+
 // 事件处理器映射
 const handlers = {
     'select-project': (el) => selectProject(parseInt(el.dataset.projectId)),
@@ -99,6 +104,7 @@ export function initEventDelegation() {
         // 处理方法下拉框
         const methodToggle = target.closest('#methodToggle');
         if (methodToggle) {
+            closeAllCustomDropdowns();
             document.getElementById('methodMenu').classList.toggle('show');
             return;
         }
@@ -113,8 +119,57 @@ export function initEventDelegation() {
             return;
         }
         
-        // 关闭方法下拉框
-        if (!target.closest('.method-dropdown')) {
+        // 处理自定义下拉框（API、环境）
+        const customToggle = target.closest('.custom-dropdown-toggle');
+        if (customToggle) {
+            const dropdownId = customToggle.id.replace('Toggle', 'Dropdown');
+            const menuId = customToggle.id.replace('Toggle', 'Menu');
+            closeAllCustomDropdowns();
+            document.getElementById(menuId)?.classList.toggle('show');
+            return;
+        }
+        
+        const customOption = target.closest('.custom-dropdown-option');
+        if (customOption) {
+            const menu = customOption.closest('.custom-dropdown-menu');
+            const dropdownId = menu.id.replace('Menu', 'Dropdown');
+            const toggleId = menu.id.replace('Menu', 'Toggle');
+            const hiddenId = menu.id.replace('Menu', 'Select');
+            const value = customOption.dataset.value;
+            const text = customOption.textContent;
+            
+            // 更新显示文本
+            const textEl = document.querySelector(`#${toggleId} .custom-dropdown-text`);
+            if (textEl) {
+                textEl.textContent = text;
+                textEl.classList.toggle('has-value', value !== '');
+            }
+            
+            // 更新隐藏的 input 值
+            const hiddenInput = document.getElementById(hiddenId);
+            if (hiddenInput) hiddenInput.value = value;
+            
+            // 更新选中状态
+            menu.querySelectorAll('.custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
+            customOption.classList.add('selected');
+            
+            // 关闭下拉框
+            menu.classList.remove('show');
+            
+            // 触发相应的回调
+            if (menu.id === 'diffApiMenu') {
+                window.onDiffApiChange?.();
+            } else if (menu.id === 'env1Menu') {
+                window.onEnvChange?.(1, false);
+            } else if (menu.id === 'env2Menu') {
+                window.onEnvChange?.(2, false);
+            }
+            return;
+        }
+        
+        // 关闭所有下拉框
+        if (!target.closest('.method-dropdown, .custom-dropdown')) {
+            closeAllCustomDropdowns();
             document.getElementById('methodMenu')?.classList.remove('show');
         }
         

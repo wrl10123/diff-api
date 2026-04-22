@@ -109,21 +109,68 @@ export function applyTestCaseById(tcId) {
 export function applyTestCase(tc) {
     setCurrentTestCaseId(tc.id);
 
-    document.getElementById('diffApiSelect').value = tc.api_id || document.getElementById('diffApiSelect').value;
+    // 更新 API 下拉框
+    const hiddenApi = document.getElementById('diffApiSelect');
+    if (hiddenApi) hiddenApi.value = tc.api_id || hiddenApi.value;
+    
+    const selectedApiOption = document.querySelector(`#diffApiMenu .custom-dropdown-option[data-value="${tc.api_id}"]`);
+    if (selectedApiOption) {
+        const textEl = document.querySelector('#diffApiToggle .custom-dropdown-text');
+        if (textEl) {
+            textEl.textContent = selectedApiOption.textContent;
+            textEl.classList.add('has-value');
+        }
+        document.querySelectorAll('#diffApiMenu .custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
+        selectedApiOption.classList.add('selected');
+    }
 
+    // 更新环境1下拉框
     if (tc.env1_id) {
-        document.getElementById('env1Select').value = tc.env1_id;
+        const hidden1 = document.getElementById('env1Select');
+        if (hidden1) hidden1.value = tc.env1_id;
+        
+        const selectedEnv1Option = document.querySelector(`#env1Menu .custom-dropdown-option[data-value="${tc.env1_id}"]`);
+        if (selectedEnv1Option) {
+            const text1 = document.querySelector('#env1Toggle .custom-dropdown-text');
+            if (text1) {
+                text1.textContent = selectedEnv1Option.textContent;
+                text1.classList.add('has-value');
+            }
+            document.querySelectorAll('#env1Menu .custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
+            selectedEnv1Option.classList.add('selected');
+        }
         onEnvChange(1, false);
     }
+    
+    // 更新环境2下拉框
     if (tc.env2_id) {
-        document.getElementById('env2Select').value = tc.env2_id;
+        const hidden2 = document.getElementById('env2Select');
+        if (hidden2) hidden2.value = tc.env2_id;
+        
+        const selectedEnv2Option = document.querySelector(`#env2Menu .custom-dropdown-option[data-value="${tc.env2_id}"]`);
+        if (selectedEnv2Option) {
+            const text2 = document.querySelector('#env2Toggle .custom-dropdown-text');
+            if (text2) {
+                text2.textContent = selectedEnv2Option.textContent;
+                text2.classList.add('has-value');
+            }
+            document.querySelectorAll('#env2Menu .custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
+            selectedEnv2Option.classList.add('selected');
+        }
         onEnvChange(2, false);
     }
 
     document.getElementById('url1').value = tc.url1 || '';
     document.getElementById('url2').value = tc.url2 || '';
 
-    document.getElementById('method').value = tc.method || 'POST';
+    // 更新请求方法下拉框
+    const method = tc.method || 'POST';
+    const methodBadge = document.querySelector(`#methodToggle .method-badge`);
+    if (methodBadge) {
+        methodBadge.className = `method-badge method-badge-${method}`;
+        methodBadge.textContent = method;
+    }
+    document.getElementById('method').value = method;
 
     setFieldValue('headers1', tc.headers1 || '{}');
     setFieldValue('headers2', tc.headers2 || '{}');

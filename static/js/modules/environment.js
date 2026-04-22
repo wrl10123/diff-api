@@ -245,21 +245,51 @@ export function refreshEnvSelects() {
     envDataCache = data;
     window.envDataCache = data;
     
-    const opts = '<option value="">-- 手动输入URL --</option>' +
-        envDataCache.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
-    const sel1 = document.getElementById('env1Select');
-    const sel2 = document.getElementById('env2Select');
-    const prevVal1 = sel1.value;
-    const prevVal2 = sel2.value;
-    sel1.innerHTML = opts;
-    sel2.innerHTML = opts;
+    // 更新自定义下拉框选项
+    const optionsHtml = '<div class="custom-dropdown-option" data-value="">-- 手动输入URL --</div>' +
+        envDataCache.map(e => `<div class="custom-dropdown-option" data-value="${e.id}">${esc(e.name)}</div>`).join('');
+    
+    const menu1 = document.getElementById('env1Menu');
+    const menu2 = document.getElementById('env2Menu');
+    if (menu1) menu1.innerHTML = optionsHtml;
+    if (menu2) menu2.innerHTML = optionsHtml;
+    
+    const hidden1 = document.getElementById('env1Select');
+    const hidden2 = document.getElementById('env2Select');
+    const prevVal1 = hidden1?.value || '';
+    const prevVal2 = hidden2?.value || '';
     
     // 设置默认值
     if (envDataCache.length > 0) {
-        if (!prevVal1) sel1.value = envDataCache[0].id;
-        if (!prevVal2) {
-            sel2.value = envDataCache.length > 1 ? envDataCache[1].id : envDataCache[0].id;
+        const defaultVal1 = prevVal1 || envDataCache[0].id;
+        const defaultVal2 = prevVal2 || (envDataCache.length > 1 ? envDataCache[1].id : envDataCache[0].id);
+        
+        // 更新隐藏 input 和显示文本
+        if (hidden1) hidden1.value = defaultVal1;
+        if (hidden2) hidden2.value = defaultVal2;
+        
+        const text1 = document.querySelector('#env1Toggle .custom-dropdown-text');
+        const text2 = document.querySelector('#env2Toggle .custom-dropdown-text');
+        const env1Name = envDataCache.find(e => e.id == defaultVal1)?.name || '-- 手动输入URL --';
+        const env2Name = envDataCache.find(e => e.id == defaultVal2)?.name || '-- 手动输入URL --';
+        
+        if (text1) {
+            text1.textContent = env1Name;
+            text1.classList.toggle('has-value', defaultVal1 !== '');
         }
+        if (text2) {
+            text2.textContent = env2Name;
+            text2.classList.toggle('has-value', defaultVal2 !== '');
+        }
+        
+        // 更新选中状态
+        menu1?.querySelectorAll('.custom-dropdown-option').forEach(opt => {
+            opt.classList.toggle('selected', opt.dataset.value == defaultVal1);
+        });
+        menu2?.querySelectorAll('.custom-dropdown-option').forEach(opt => {
+            opt.classList.toggle('selected', opt.dataset.value == defaultVal2);
+        });
+        
         onEnvChange(1, false);
         onEnvChange(2, false);
     }
@@ -273,11 +303,14 @@ export function refreshEnvSelects() {
 export function onEnvChange(side, updateHeadersBody = true) {
     const sel = document.getElementById('env' + side + 'Select');
     const urlInput = document.getElementById('url' + side);
-    const envId = sel.value;
+    const envId = sel?.value || '';
     if (envId) {
         const env = envDataCache.find(e => e.id == envId);
         if (env) {
-            const apiPath = document.getElementById('diffApiSelect').selectedOptions[0]?.dataset?.path || '';
+            // 从自定义下拉框获取 API 路径
+            const apiId = document.getElementById('diffApiSelect')?.value;
+            const selectedApiOption = document.querySelector(`#diffApiMenu .custom-dropdown-option[data-value="${apiId}"]`);
+            const apiPath = selectedApiOption?.dataset?.path || '';
             urlInput.value = env.base_url.replace(/[/]+$/, '') + apiPath;
             if (updateHeadersBody) {
                 setFieldValue('headers' + side, env.default_headers || '{}');
