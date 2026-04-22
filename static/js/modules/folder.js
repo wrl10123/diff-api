@@ -125,7 +125,7 @@ function renderFolderTree(nodes, level = 0, isFirstBatch = false) {
         const isExpanded = hasFolderExpandState(node.id)
             ? getFolderExpandStateById(node.id)
             : shouldExpandByDefault;
-        const indent = level * 16;
+        const indent = level * 6;
         const hasChildren = node.children?.length > 0;
         const hasApis = node.apis?.length > 0;
         const expandIcon = hasChildren || hasApis ? (isExpanded ? '▼' : '▶') : '•';
@@ -134,7 +134,7 @@ function renderFolderTree(nodes, level = 0, isFirstBatch = false) {
             <div class="folder-item ${currentFolderId === node.id ? 'active' : ''}" 
                  data-folder-id="${node.id}" 
                  data-parent-id="${node.parent_id || ''}"
-                 style="padding-left:${8 + indent}px">
+                 style="padding-left:${6 + indent}px">
                 <div class="folder-header" onclick="selectFolder(${node.id})">
                     <span class="folder-expand" onclick="event.stopPropagation();toggleFolder(${node.id})">${expandIcon}</span>
                     <span class="folder-icon">📁</span>
@@ -160,7 +160,7 @@ function renderFolderTree(nodes, level = 0, isFirstBatch = false) {
 
         if (node.apis?.length > 0) {
             html += `<div class="folder-apis-container">${node.apis.map(api => `
-                <div class="api-item api-card" data-api-id="${api.id}" style="padding-left:${24 + indent}px" onclick="selectApiForDiff(${api.id})">
+                <div class="api-item api-card" data-api-id="${api.id}" style="padding-left:${12 + indent}px" onclick="selectApiForDiff(${api.id})">
                     <span class="tc-toggle" onclick="event.stopPropagation();toggleTestCases(this.parentElement)">▶</span>
                     <span class="api-method method-${api.method}">${api.method}</span>
                     <span class="api-name" data-name="${esc(api.name)}" data-path="${esc(api.path)}" data-query-params="${esc(api.query_params || '{}')}" data-method="${esc(api.method)}" data-headers="${esc(api.headers || '{}')}" data-body="${esc(api.body || '{}')}">${esc(api.name)}</span>

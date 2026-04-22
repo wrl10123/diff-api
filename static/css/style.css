@@ -1289,10 +1289,10 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
 .api-method {
     font-size: 10px;
     font-weight: 600;
-    padding: 2px 5px;
+    padding: 2px 1px;
     border-radius: 3px;
     color: #fff;
-    min-width: 36px;
+    min-width: 20px;
     text-align: center;
 }
 
