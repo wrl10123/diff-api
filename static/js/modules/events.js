@@ -96,6 +96,28 @@ export function initEventDelegation() {
             }
         }
         
+        // 处理方法下拉框
+        const methodToggle = target.closest('#methodToggle');
+        if (methodToggle) {
+            document.getElementById('methodMenu').classList.toggle('show');
+            return;
+        }
+        
+        const methodOption = target.closest('.method-option');
+        if (methodOption) {
+            const value = methodOption.dataset.value;
+            const badge = methodOption.querySelector('.method-badge').cloneNode(true);
+            document.querySelector('#methodToggle .method-badge').replaceWith(badge);
+            document.getElementById('method').value = value;
+            document.getElementById('methodMenu').classList.remove('show');
+            return;
+        }
+        
+        // 关闭方法下拉框
+        if (!target.closest('.method-dropdown')) {
+            document.getElementById('methodMenu')?.classList.remove('show');
+        }
+        
         // 关闭所有下拉菜单（点击空白区域）
         if (!target.closest('.folder-menu, .project-menu, .dropdown')) {
             closeAllDropdowns();

@@ -83,20 +83,24 @@
             <div class="panel">
                 <div class="panel-title">API对比</div>
 
-                <div class="grid">
+                <div class="flex" style="gap: 10px; align-items: flex-start;">
                 <!-- 请求方法 -->
-                <div class="form-group">
-                    <!--<label>请求方法</label>-->
-                    <select id="method">
-                        <option value="GET">GET</option>
-                        <option value="POST" selected>POST</option>
-                        <option value="PUT">PUT</option>
-                        <option value="DELETE">DELETE</option>
-                    </select>
+                <div class="method-dropdown" style="width: 80px; flex-shrink: 0;">
+                    <div class="method-dropdown-toggle" id="methodToggle">
+                        <span class="method-badge method-badge-POST">POST</span>
+                        <span class="method-arrow">▼</span>
+                    </div>
+                    <div class="method-dropdown-menu" id="methodMenu">
+                        <div class="method-option" data-value="GET"><span class="method-badge method-badge-GET">GET</span></div>
+                        <div class="method-option" data-value="POST"><span class="method-badge method-badge-POST">POST</span></div>
+                        <div class="method-option" data-value="PUT"><span class="method-badge method-badge-PUT">PUT</span></div>
+                        <div class="method-option" data-value="DELETE"><span class="method-badge method-badge-DELETE">DELETE</span></div>
+                    </div>
+                    <input type="hidden" id="method" value="POST">
                 </div>
                 <!-- 选择API -->
-                <div class="form-group">
-                    <select id="diffApiSelect" class="api-select" onchange="onDiffApiChange()">
+                <div style="flex: 1;">
+                    <select id="diffApiSelect" class="api-select" onchange="onDiffApiChange()" style="width: 100%;">
                         <option value="">请选择...</option>
                     </select>
                 </div>
@@ -302,6 +306,7 @@
                     保存用例
                 </button>
             </div>
+            <br>
 
             <div class="panel">
                 <div class="panel-title">对比结果</div>

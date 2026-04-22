@@ -41,7 +41,12 @@ export function toggleInputMode(fieldId, btn) {
             const key = row.querySelector('.kv-key').value.trim();
             const value = row.querySelector('.kv-value').value;
             if (key) {
-                jsonObj[key] = value;
+                // 尝试解析 value（如果它看起来像 JSON）
+                try {
+                    jsonObj[key] = JSON.parse(value);
+                } catch(e) {
+                    jsonObj[key] = value;
+                }
             }
         });
         jsonTextarea.value = JSON.stringify(jsonObj, null, 2);
@@ -55,11 +60,17 @@ export function toggleInputMode(fieldId, btn) {
  * @param {string} [value=''] - 值
  */
 export function addKvRowToList(listEl, key = '', value = '') {
+    // 如果 value 是对象，转换为格式化的 JSON 字符串
+    let valueStr = value;
+    if (typeof value === 'object' && value !== null) {
+        valueStr = JSON.stringify(value, null, 2);
+    }
+    
     const row = document.createElement('div');
     row.className = 'kv-row';
     row.innerHTML = `
         <input type="text" placeholder="key" class="kv-key" value="${esc(key)}">
-        <input type="text" placeholder="value" class="kv-value" value="${esc(value)}">
+        <input type="text" placeholder="value" class="kv-value" value="${esc(valueStr)}">
         <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
     `;
     listEl.appendChild(row);
@@ -92,7 +103,12 @@ export function getFieldJsonValue(fieldId) {
             const key = row.querySelector('.kv-key').value.trim();
             const value = row.querySelector('.kv-value').value;
             if (key) {
-                jsonObj[key] = value;
+                // 尝试解析 value（如果它看起来像 JSON）
+                try {
+                    jsonObj[key] = JSON.parse(value);
+                } catch(e) {
+                    jsonObj[key] = value;
+                }
             }
         });
         return jsonObj;
