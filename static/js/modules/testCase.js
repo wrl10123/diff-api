@@ -59,11 +59,12 @@ export async function loadTestCases(apiId, apiEl) {
             <div class="test-case-item" data-tc-id="${tc.id}" onclick="event.stopPropagation();applyTestCaseById(${tc.id})" title="点击加载此用例">
                 <span>&#128736;</span>
                 <span class="tc-name">${esc(tc.name)}</span>
-                <span class="tc-time">${tc.updated_at ? tc.updated_at.replace('T', ' ').substring(0, 19) : ''}</span>
+                
                 <button class="tc-delete" onclick="event.stopPropagation();deleteTestCase(${tc.id}, this)" title="删除">🗑️</button>
             </div>
         `).join('');
-        
+        //<span class="tc-time">${tc.updated_at ? tc.updated_at.replace('T', ' ').substring(0, 19) : ''}</span>
+
         // 初始化用例的拖拽排序 - 注意：这里要重新初始化整个容器
         makeSortable(tcContainer, 'testCases');
         

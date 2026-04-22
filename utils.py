@@ -137,9 +137,9 @@ def safe_json_dumps(data: Any, max_length: Optional[int] = None) -> str:
         max_length: 最大长度限制，超出则截断
     
     Returns:
-        JSON字符串
+        JSON字符串（格式化）
     """
-    result = to_json(data, ensure_ascii=False)
+    result = to_json(data, ensure_ascii=False, indent=2)
     if max_length and len(result) > max_length:
         result = result[:max_length]
     return result
@@ -171,10 +171,10 @@ def dump_json(val: Any) -> str:
         val: 要处理的值
     
     Returns:
-        JSON字符串（如果是字典）或原值（如果不是字典），None时返回'{}'
+        JSON字符串（格式化，如果是字典）或原值（如果不是字典），None时返回'{}'
     """
     if isinstance(val, dict):
-        return to_json(val, ensure_ascii=False)
+        return to_json(val, ensure_ascii=False, indent=2)
     return val or '{}'
 
 

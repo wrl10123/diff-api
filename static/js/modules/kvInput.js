@@ -114,7 +114,18 @@ export function setFieldJsonValue(fieldId, jsonValue) {
     const kvContainer = document.getElementById(fieldId + '-kv-container') || document.getElementById(fieldId + '-kv');
     const jsonTextarea = document.getElementById(fieldId + '-json') || document.getElementById(fieldId);
 
-    const jsonStr = typeof jsonValue === 'string' ? jsonValue : JSON.stringify(jsonValue || {});
+    let jsonStr;
+    if (typeof jsonValue === 'string') {
+        // 如果是字符串，尝试解析并重新格式化
+        try {
+            const parsed = JSON.parse(jsonValue);
+            jsonStr = JSON.stringify(parsed, null, 2);
+        } catch(e) {
+            jsonStr = jsonValue;
+        }
+    } else {
+        jsonStr = JSON.stringify(jsonValue || {}, null, 2);
+    }
     if (jsonTextarea) jsonTextarea.value = jsonStr;
 
     if (kvContainer) {
