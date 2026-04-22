@@ -255,14 +255,12 @@ export function selectApiForDiff(apiId) {
  * 更新Params显示
  */
 function updateParamsDisplay(side, params) {
-    const paramsGroup = document.getElementById(`params${side}-group`);
     const paramsTextarea = document.getElementById(`params${side}`);
     const paramsKvList = document.getElementById(`params${side}-kv-list`);
     
-    if (!paramsGroup || !paramsTextarea) return;
+    if (!paramsTextarea) return;
     
     const hasParams = params && Object.keys(params).length > 0;
-    paramsGroup.style.display = hasParams ? 'block' : 'none';
     
     if (hasParams) {
         paramsTextarea.value = JSON.stringify(params, null, 2);

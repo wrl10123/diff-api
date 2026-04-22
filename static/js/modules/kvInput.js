@@ -166,3 +166,49 @@ export function setFieldJsonValue(fieldId, jsonValue) {
 // 兼容别名
 export const setFieldValue = setFieldJsonValue;
 export const getFieldValue = getFieldJsonValue;
+
+// 当前选中的Tab状态
+const currentTab = { 1: 'body', 2: 'body' };
+
+/**
+ * 切换Tab
+ * @param {number} side - 侧边 (1 或 2)
+ * @param {string} tabName - Tab名称 (params/headers/body)
+ */
+export function switchTab(side, tabName) {
+    currentTab[side] = tabName;
+    
+    // 更新Tab头部选中状态
+    const tabHeader = document.querySelector(`#tab-${tabName}${side}`).closest('.tab-container').querySelector('.tab-header');
+    tabHeader.querySelectorAll('.tab-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.tab === `${tabName}${side}`);
+    });
+    
+    // 更新Tab内容显示
+    ['params', 'headers', 'body'].forEach(name => {
+        const panel = document.getElementById(`tab-${name}${side}`);
+        if (panel) {
+            panel.classList.toggle('active', name === tabName);
+            panel.style.display = name === tabName ? 'block' : 'none';
+        }
+    });
+}
+
+/**
+ * 切换当前Tab的输入模式
+ * @param {number} side - 侧边 (1 或 2)
+ */
+export function toggleCurrentTabMode(side) {
+    const tabName = currentTab[side];
+    const fieldId = `${tabName}${side}`;
+    toggleInputMode(fieldId);
+}
+
+/**
+ * 获取当前选中的Tab名称
+ * @param {number} side - 侧边 (1 或 2)
+ * @returns {string} Tab名称
+ */
+export function getCurrentTab(side) {
+    return currentTab[side];
+}

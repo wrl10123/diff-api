@@ -66,13 +66,20 @@ class DiffService:
     
     def _send_request(self, url, method, headers, body):
         """发送HTTP请求"""
+        # 确保 headers 中的所有值都是字符串
+        str_headers = {}
+        if headers:
+            for key, value in headers.items():
+                if value is not None:
+                    str_headers[key] = str(value)
+        
         try:
             if method.upper() == 'GET':
-                response = requests.get(url, headers=headers, params=body, timeout=30)
+                response = requests.get(url, headers=str_headers, params=body, timeout=30)
             elif method.upper() in ['POST', 'PUT', 'DELETE']:
-                response = requests.request(method, url, headers=headers, json=body, timeout=30)
+                response = requests.request(method, url, headers=str_headers, json=body, timeout=30)
             else:
-                response = requests.request(method, url, headers=headers, json=body, timeout=30)
+                response = requests.request(method, url, headers=str_headers, json=body, timeout=30)
             
             # 尝试解析JSON响应
             try:

@@ -11,7 +11,7 @@ import { loadFolders, openFolderModal, saveFolder, deleteFolder, toggleFolder, t
 import { loadApisForDiff, openApiModal, saveApi, deleteApi, selectApiForDiff } from './modules/api.js';
 import { loadVariables } from './modules/variable.js';
 import { loadTestCases, toggleTestCases } from './modules/testCase.js';
-import { toggleInputMode, addKvRow } from './modules/kvInput.js';
+import { toggleInputMode, addKvRow, switchTab, toggleCurrentTabMode } from './modules/kvInput.js';
 import { openImportModal, switchImportFormat, handleImportFile, importAPI } from './modules/import.js';
 import { setupGlobalErrorHandler } from './modules/errorHandler.js';
 import { initEventDelegation } from './modules/events.js';
@@ -21,6 +21,8 @@ setupGlobalErrorHandler();
 // 暴露到window（兼容旧代码，渐进式迁移中）
 window.toggleInputMode = toggleInputMode;
 window.addKvRow = addKvRow;
+window.switchTab = switchTab;
+window.toggleCurrentTabMode = toggleCurrentTabMode;
 window.closeModal = closeModal;
 window.openFolderModal = openFolderModal;
 window.saveFolder = saveFolder;

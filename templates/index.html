@@ -140,80 +140,60 @@
                                 </button>
                             </div>
                         </div>
-                        <!-- Params -->
-                        <div class="form-group" id="params1-group">
-                            <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                <label>Params</label>
-                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('params1')"
-                                        title="切换风格">⇄
-                                </button>
-                            </div>
-                            <div id="params1-kv-container" class="kv-container">
-                                <div class="kv-list" id="params1-kv-list">
-                                    <div class="kv-row">
-                                        <input type="text" placeholder="key" class="kv-key">
-                                        <input type="text" placeholder="value" class="kv-value">
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="this.parentElement.remove()">x
-                                        </button>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('params1')"
-                                        style="margin-top: 5px;"> +
-                                </button>
-                            </div>
-                            <textarea id="params1" class="json-textarea hidden"
-                                      placeholder='{"key": "value"}'>{}</textarea>
-                        </div>
-                        <!-- Headers -->
+                        <!-- Tabs: Params / Headers / Body -->
                         <div class="form-group">
-                            <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                <label>Headers</label>
-                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('headers1')"
-                                        title="切换风格">⇄
-                                </button>
-                            </div>
-                            <div id="headers1-kv-container" class="kv-container">
-                                <div class="kv-list" id="headers1-kv-list">
-                                    <div class="kv-row">
-                                        <input type="text" placeholder="key" class="kv-key">
-                                        <input type="text" placeholder="value" class="kv-value">
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="this.parentElement.remove()">x
-                                        </button>
+                            <div class="tab-container">
+                                <div class="tab-header">
+                                    <div class="tab-item" data-tab="params1" onclick="switchTab(1, 'params')">Params</div>
+                                    <div class="tab-item" data-tab="headers1" onclick="switchTab(1, 'headers')">Headers</div>
+                                    <div class="tab-item active" data-tab="body1" onclick="switchTab(1, 'body')">Body</div>
+                                    <button type="button" class="btn-toggle-mode tab-toggle" onclick="toggleCurrentTabMode(1)" title="切换风格">⇄</button>
+                                </div>
+                                <div class="tab-content">
+                                    <!-- Params -->
+                                    <div class="tab-panel" id="tab-params1" style="display:none;">
+                                        <div id="params1-kv-container" class="kv-container">
+                                            <div class="kv-list" id="params1-kv-list">
+                                                <div class="kv-row">
+                                                    <input type="text" placeholder="key" class="kv-key">
+                                                    <input type="text" placeholder="value" class="kv-value">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('params1')" style="margin-top: 5px;">+</button>
+                                        </div>
+                                        <textarea id="params1" class="json-textarea hidden" placeholder='{"key": "value"}'>{}</textarea>
+                                    </div>
+                                    <!-- Headers -->
+                                    <div class="tab-panel" id="tab-headers1" style="display:none;">
+                                        <div id="headers1-kv-container" class="kv-container">
+                                            <div class="kv-list" id="headers1-kv-list">
+                                                <div class="kv-row">
+                                                    <input type="text" placeholder="key" class="kv-key">
+                                                    <input type="text" placeholder="value" class="kv-value">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers1')" style="margin-top: 5px;">+</button>
+                                        </div>
+                                        <textarea id="headers1" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
+                                    </div>
+                                    <!-- Body -->
+                                    <div class="tab-panel active" id="tab-body1">
+                                        <div id="body1-kv-container" class="kv-container hidden">
+                                            <div class="kv-list" id="body1-kv-list">
+                                                <div class="kv-row">
+                                                    <input type="text" placeholder="key" class="kv-key">
+                                                    <input type="text" placeholder="value" class="kv-value">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body1')" style="margin-top: 5px;">+</button>
+                                        </div>
+                                        <textarea id="body1" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers1')"
-                                        style="margin-top: 5px;"> +
-                                </button>
                             </div>
-                            <textarea id="headers1" class="json-textarea hidden"
-                                      placeholder='{"Content-Type": "application/json"}'>{}</textarea>
-                        </div>
-                        <!-- Body -->
-                        <div class="form-group">
-                            <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                <label>Body</label>
-                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('body1')"
-                                        title="切换风格">⇄
-                                </button>
-                            </div>
-                            <div id="body1-kv-container" class="kv-container hidden">
-                                <div class="kv-list" id="body1-kv-list">
-                                    <div class="kv-row">
-                                        <input type="text" placeholder="key" class="kv-key">
-                                        <input type="text" placeholder="value" class="kv-value">
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="this.parentElement.remove()">x
-                                        </button>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body1')"
-                                        style="margin-top: 5px;"> +
-                                </button>
-                            </div>
-                            <textarea id="body1" class="json-textarea"
-                                      placeholder='{"key": "value"} // 支持注释'>{}</textarea>
                         </div>
                     </div>
                     <!-- 右侧 -->
@@ -242,80 +222,60 @@
                                 </button>
                             </div>
                         </div>
-                        <!-- Params -->
-                        <div class="form-group" id="params2-group">
-                            <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                <label>Params</label>
-                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('params2')"
-                                        title="切换风格">⇄
-                                </button>
-                            </div>
-                            <div id="params2-kv-container" class="kv-container">
-                                <div class="kv-list" id="params2-kv-list">
-                                    <div class="kv-row">
-                                        <input type="text" placeholder="key" class="kv-key">
-                                        <input type="text" placeholder="value" class="kv-value">
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="this.parentElement.remove()">x
-                                        </button>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('params2')"
-                                        style="margin-top: 5px;"> +
-                                </button>
-                            </div>
-                            <textarea id="params2" class="json-textarea hidden"
-                                      placeholder='{"key": "value"}'>{}</textarea>
-                        </div>
-                        <!-- Header -->
+                        <!-- Tabs: Params / Headers / Body -->
                         <div class="form-group">
-                            <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                <label>Headers</label>
-                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('headers2')"
-                                        title="切换风格">⇄
-                                </button>
-                            </div>
-                            <div id="headers2-kv-container" class="kv-container">
-                                <div class="kv-list" id="headers2-kv-list">
-                                    <div class="kv-row">
-                                        <input type="text" placeholder="key" class="kv-key">
-                                        <input type="text" placeholder="value" class="kv-value">
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="this.parentElement.remove()">x
-                                        </button>
+                            <div class="tab-container">
+                                <div class="tab-header">
+                                    <div class="tab-item" data-tab="params2" onclick="switchTab(2, 'params')">Params</div>
+                                    <div class="tab-item" data-tab="headers2" onclick="switchTab(2, 'headers')">Headers</div>
+                                    <div class="tab-item active" data-tab="body2" onclick="switchTab(2, 'body')">Body</div>
+                                    <button type="button" class="btn-toggle-mode tab-toggle" onclick="toggleCurrentTabMode(2)" title="切换风格">⇄</button>
+                                </div>
+                                <div class="tab-content">
+                                    <!-- Params -->
+                                    <div class="tab-panel" id="tab-params2" style="display:none;">
+                                        <div id="params2-kv-container" class="kv-container">
+                                            <div class="kv-list" id="params2-kv-list">
+                                                <div class="kv-row">
+                                                    <input type="text" placeholder="key" class="kv-key">
+                                                    <input type="text" placeholder="value" class="kv-value">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('params2')" style="margin-top: 5px;">+</button>
+                                        </div>
+                                        <textarea id="params2" class="json-textarea hidden" placeholder='{"key": "value"}'>{}</textarea>
+                                    </div>
+                                    <!-- Headers -->
+                                    <div class="tab-panel" id="tab-headers2" style="display:none;">
+                                        <div id="headers2-kv-container" class="kv-container">
+                                            <div class="kv-list" id="headers2-kv-list">
+                                                <div class="kv-row">
+                                                    <input type="text" placeholder="key" class="kv-key">
+                                                    <input type="text" placeholder="value" class="kv-value">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers2')" style="margin-top: 5px;">+</button>
+                                        </div>
+                                        <textarea id="headers2" class="json-textarea hidden" placeholder='{"Content-Type": "application/json"}'>{}</textarea>
+                                    </div>
+                                    <!-- Body -->
+                                    <div class="tab-panel active" id="tab-body2">
+                                        <div id="body2-kv-container" class="kv-container hidden">
+                                            <div class="kv-list" id="body2-kv-list">
+                                                <div class="kv-row">
+                                                    <input type="text" placeholder="key" class="kv-key">
+                                                    <input type="text" placeholder="value" class="kv-value">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">x</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body2')" style="margin-top: 5px;">+</button>
+                                        </div>
+                                        <textarea id="body2" class="json-textarea" placeholder='{"key": "value"} // 支持注释'>{}</textarea>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('headers2')"
-                                        style="margin-top: 5px;"> +
-                                </button>
                             </div>
-                            <textarea id="headers2" class="json-textarea hidden"
-                                      placeholder='{"Content-Type": "application/json"}'>{}</textarea>
-                        </div>
-                        <!-- Body -->
-                        <div class="form-group">
-                            <div class="flex" style="justify-content: space-between; margin-bottom: 5px;">
-                                <label>Body</label>
-                                <button type="button" class="btn-toggle-mode" onclick="toggleInputMode('body2')"
-                                        title="切换风格">⇄
-                                </button>
-                            </div>
-                            <div id="body2-kv-container" class="kv-container hidden">
-                                <div class="kv-list" id="body2-kv-list">
-                                    <div class="kv-row">
-                                        <input type="text" placeholder="key" class="kv-key">
-                                        <input type="text" placeholder="value" class="kv-value">
-                                        <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="this.parentElement.remove()">x
-                                        </button>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="addKvRow('body2')"
-                                        style="margin-top: 5px;"> +
-                                </button>
-                            </div>
-                            <textarea id="body2" class="json-textarea"
-                                      placeholder='{"key": "value"} // 支持注释'>{}</textarea>
                         </div>
                     </div>
                 </div>

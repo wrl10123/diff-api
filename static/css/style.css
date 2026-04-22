@@ -313,6 +313,56 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
 .modal-close:hover { color: #333; }
 .empty-tip { padding: 10px; color: #999; font-size: 14px; }
 
+/* Tab 组件样式 */
+.tab-container {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.tab-header {
+    display: flex;
+    background: #fff;
+    border-bottom: 1px solid #ffdbdb;
+    align-items: center;
+}
+.tab-item {
+    flex: 1;
+    padding: 10px 16px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #191919;
+    border-right: 1px solid #919191;
+    transition: all 0.2s;
+}
+.tab-item:last-of-type {
+    border-right: none;
+}
+.tab-item:hover {
+    background: #e8e8e8;
+    color: #404040;
+}
+.tab-item.active {
+    background: rgb(157 255 132 / 0.11);
+    color: #202020;
+    font-weight: 600;
+    border-bottom: 2px solid #9a9ea6;
+    margin-bottom: -1px;
+}
+.tab-toggle {
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+.tab-content {
+    background: #fff;
+}
+.tab-panel {
+    display: none;
+}
+.tab-panel.active {
+    display: block;
+}
+
 /* Key-Value 输入样式 */
 .kv-container {
     border: 1px solid #eee;
