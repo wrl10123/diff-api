@@ -238,47 +238,6 @@ function updateParamsDisplay(side, params) {
 }
 
 /**
- * 切换Params显示模式
- */
-export function toggleParamsMode(side) {
-    const kvContainer = document.getElementById(`params${side}-kv-container`);
-    const jsonTextarea = document.getElementById(`params${side}`);
-    
-    if (!kvContainer || !jsonTextarea) return;
-    
-    if (kvContainer.classList.contains('hidden')) {
-        // 切换到KV模式
-        kvContainer.classList.remove('hidden');
-        jsonTextarea.classList.add('hidden');
-        
-        try {
-            const jsonObj = JSON.parse(jsonTextarea.value || '{}');
-            const kvList = kvContainer.querySelector('.kv-list');
-            kvList.innerHTML = '';
-            Object.entries(jsonObj).forEach(([key, value]) => {
-                addKvRowToList(kvList, key, value);
-            });
-        } catch (e) {
-            const kvList = kvContainer.querySelector('.kv-list');
-            kvList.innerHTML = '';
-        }
-    } else {
-        // 切换到JSON模式
-        kvContainer.classList.add('hidden');
-        jsonTextarea.classList.remove('hidden');
-        
-        const kvRows = kvContainer.querySelectorAll('.kv-row');
-        const jsonObj = {};
-        kvRows.forEach(row => {
-            const key = row.querySelector('.kv-key').value.trim();
-            const value = row.querySelector('.kv-value').value;
-            if (key) jsonObj[key] = value;
-        });
-        jsonTextarea.value = JSON.stringify(jsonObj, null, 2);
-    }
-}
-
-/**
  * 复制完整URL（包含query params）
  */
 export function copyUrl(side, btn) {
@@ -384,4 +343,3 @@ window.deleteApi = deleteApi;
 window.selectApiForDiff = selectApiForDiff;
 window.onDiffApiChange = onDiffApiChange;
 window.copyUrl = copyUrl;
-window.toggleParamsMode = toggleParamsMode;

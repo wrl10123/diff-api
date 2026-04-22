@@ -10,7 +10,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 5px; color: #666; font-size: 14px; }
 .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-.form-group textarea { min-height: 80px; font-family: monospace; }
+.form-group textarea { min-height: 160px; font-family: monospace; }
 
 /* API选择下拉框 */
 .api-select {
