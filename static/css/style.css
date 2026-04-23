@@ -115,7 +115,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     background: rgba(0,123,255,0.08);
     border: none;
     color: #007bff;
-    font-size: 16px;
+    font-size: 12px;
     cursor: pointer;
     padding: 2px 8px;
     border-radius: 4px;
@@ -252,6 +252,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     background: #fff;
 }
 
+.json-textarea {
+    /*background: #ec0000;*/
+    /*border: #007bff;*/
+}
+
+.json-textarea:active {
+    /*border: #007bff;*/
+}
+
 .tree-item { padding: 8px 10px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
 .tree-item:hover { background: #f0f0f0; }
 .tree-item.active { background: #e3f2fd; }
@@ -331,26 +340,30 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
 }
 .tab-item {
     float: left;
-    padding: 7px 12px;
+    padding: 4px 8px;
     text-align: center;
     cursor: pointer;
     font-size: 14px;
     color: #191919;
-    border-right: 1px solid #919191;
+    /*border-right: 1px solid #919191;*/
     transition: all 0.2s;
+    /*background-color: rgb(0 255 61 / 0.04);*/
+    margin: 5px 1px;
+    border-radius: 4px;
 }
 .tab-item:last-of-type {
     border-right: none;
 }
 .tab-item:hover {
-    background: #e8e8e8;
-    color: #404040;
+    background: rgb(232 232 232 / 0.49);
+    color: #373737;
 }
 .tab-item.active {
-    background: rgb(181 181 181 / 0.11);
+    /*background: rgb(12 46 228 / 0.14);*/
     color: #202020;
     font-weight: 600;
-    border-bottom: 2px solid #ececec;
+    border-bottom: 2px solid rgb(103 89 241);
+    /*border-style: groove;*/
 }
 .tab-toggle {
     float: right;
@@ -366,6 +379,7 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
 }
 .tab-panel.active {
     display: none;
+    /*border: 2px solid rgb(103 89 241);*/
 }
 
 /* Key-Value 输入样式 */
