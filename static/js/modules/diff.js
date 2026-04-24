@@ -106,11 +106,11 @@ export function renderDiffResult(result) {
     // 并排对比面板
     html += '<div id="diff-detail" class="sbd-container">';
     html += '<div class="sbd-panel sbd-left">';
-    html += '<div class="sbd-header">环境1 响应</div>';
+    html += '<div class="sbd-header">Env1</div>';
     html += '<div class="sbd-body" id="sbd-left-body"></div></div>';
     html += '<div class="sbd-divider"></div>';
     html += '<div class="sbd-panel sbd-right">';
-    html += '<div class="sbd-header">环境2 响应</div>';
+    html += '<div class="sbd-header">Env2</div>';
     html += '<div class="sbd-body" id="sbd-right-body"></div></div>';
     html += '</div>';
     
