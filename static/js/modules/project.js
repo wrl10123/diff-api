@@ -93,14 +93,12 @@ export async function selectProject(projectId) {
     document.querySelectorAll('#projectList .tree-item').forEach(el => el.classList.remove('active'));
     const el = document.getElementById('project-' + projectId);
     if (el) el.classList.add('active');
-    const addFolderBtn = document.getElementById('addFolderBtn');
-    if (addFolderBtn) addFolderBtn.style.display = 'inline-block';
+    const apiMenuContainer = document.getElementById('apiMenuContainer');
+    if (apiMenuContainer) apiMenuContainer.style.display = 'inline-block';
     const varManageBtn = document.getElementById('varManageBtn');
     if (varManageBtn) varManageBtn.style.display = 'inline-block';
     const envManageBtn = document.getElementById('envManageBtn');
     if (envManageBtn) envManageBtn.style.display = 'inline-block';
-    const addApiBtn = document.getElementById('addApiBtn');
-    if (addApiBtn) addApiBtn.style.display = 'none';
     
     await loadEnvironmentsForProject(projectId);
     
@@ -142,8 +140,7 @@ export async function deleteProject(id) {
     document.getElementById('folderTree').innerHTML = '<div class="empty-tip">请先选择项目</div>';
     document.getElementById('varManageBtn').style.display = 'none';
     document.getElementById('envManageBtn').style.display = 'none';
-    document.getElementById('addApiBtn').style.display = 'none';
-    document.getElementById('importApiBtn').style.display = 'none';
+    document.getElementById('apiMenuContainer').style.display = 'none';
     loadProjects();
 }
 

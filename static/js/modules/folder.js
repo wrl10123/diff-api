@@ -205,10 +205,7 @@ export function selectFolder(folderId) {
     const el = document.querySelector(`[data-folder-id="${folderId}"]`);
     if (el) el.classList.add('active');
 
-    document.getElementById('addApiBtn').style.display = 'inline-block';
-    document.getElementById('addApiBtn').onclick = () => openApiModal(null, folderId);
-    document.getElementById('importApiBtn').style.display = 'inline-block';
-    document.getElementById('importApiBtn').onclick = () => openImportModal(folderId);
+    // API管理菜单已改为下拉菜单，不需要在这里控制显示
 }
 
 /**
@@ -241,6 +238,18 @@ export function closeAllDropdowns() {
     document.querySelectorAll('.folder-menu-dropdown.show').forEach(m => m.classList.remove('show'));
 }
 
+export function toggleApiMenu(btn) {
+    const menu = document.getElementById('apiMenuDropdown');
+    if (!menu) return;
+    document.querySelectorAll('.folder-menu-dropdown.show').forEach(m => { if (m !== menu) m.classList.remove('show'); });
+    menu.classList.toggle('show');
+}
+
+export function hideApiMenu() {
+    const menu = document.getElementById('apiMenuDropdown');
+    if (menu) menu.classList.remove('show');
+}
+
 window.openFolderModal = openFolderModal;
 window.saveFolder = saveFolder;
 window.selectFolder = selectFolder;
@@ -249,3 +258,5 @@ window.toggleFolder = toggleFolder;
 window.toggleFolderMenu = toggleFolderMenu;
 window.hideFolderMenu = hideFolderMenu;
 window.closeAllDropdowns = closeAllDropdowns;
+window.toggleApiMenu = toggleApiMenu;
+window.hideApiMenu = hideApiMenu;

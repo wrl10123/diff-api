@@ -58,15 +58,14 @@
                                 <div onclick="onSortChange('folders', 'time_asc')">最早优先</div>
                             </div>
                         </div>
-                        <button class="btn-add" id="addFolderBtn" onclick="openFolderModal()" style="display:none"
-                                title="新建目录">+
-                        </button>
-                        <button class="btn-add" id="addApiBtn" onclick="openApiModal()" style="display:none"
-                                title="新建API">+
-                        </button>
-                        <button class="btn-add" id="importApiBtn" onclick="openImportModal()" style="display:none"
-                                title="导入OpenAPI">⬇
-                        </button>
+                        <div class="folder-menu" id="apiMenuContainer" style="display:none;">
+                            <button class="folder-menu-btn" onclick="event.stopPropagation();toggleApiMenu(this)" style="opacity:1;">⋯</button>
+                            <div class="folder-menu-dropdown" id="apiMenuDropdown">
+                                <div onclick="event.stopPropagation();openApiModal();hideApiMenu()">➕ 新建API</div>
+                                <div onclick="event.stopPropagation();openFolderModal();hideApiMenu()">📁 新建目录</div>
+                                <div onclick="event.stopPropagation();openImportModal();hideApiMenu()">⬇️ 导入OpenAPI</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div id="folderTree" class="folder-tree">
