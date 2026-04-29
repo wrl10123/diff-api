@@ -3,6 +3,9 @@ API对比服务
 """
 import requests
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DiffService:
@@ -32,6 +35,14 @@ class DiffService:
             body1 = {}
         if body2 is None:
             body2 = {}
+        
+        # 打印请求信息
+        logger.info(f'========== API对比开始 ==========')
+        logger.info(f'环境1 URL: {url1}')
+        logger.info(f'环境1 Body: {json.dumps(body1, ensure_ascii=False, indent=2)}')
+        logger.info(f'环境2 URL: {url2}')
+        logger.info(f'环境2 Body: {json.dumps(body2, ensure_ascii=False, indent=2)}')
+        logger.info(f'请求方法: {method}')
         
         result = {
             'success': False,

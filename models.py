@@ -3,6 +3,7 @@
 """
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 db = SQLAlchemy()
 
@@ -141,9 +142,9 @@ class DiffRecord(db.Model):
     api_id = db.Column(db.Integer, db.ForeignKey('api_configs.id'), nullable=False, comment='API配置ID')
     env1_url = db.Column(db.String(500), nullable=False, comment='环境1 URL')
     env2_url = db.Column(db.String(500), nullable=False, comment='环境2 URL')
-    env1_response = db.Column(db.Text, comment='环境1响应(截取前2000字符)')
-    env2_response = db.Column(db.Text, comment='环境2响应(截取前2000字符)')
-    diff_result = db.Column(db.Text, comment='对比结果(JSON,截取前2000字符)')
+    env1_response = db.Column(db.Text, comment='环境1响应')
+    env2_response = db.Column(db.Text, comment='环境2响应')
+    diff_result = db.Column(LONGTEXT, comment='对比结果(JSON)')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
 
     def to_dict(self):
@@ -175,7 +176,7 @@ class TestCase(db.Model):
     headers2 = db.Column(db.Text, comment='环境2请求头(JSON字符串)')
     body1 = db.Column(db.Text, comment='环境1请求体(JSON字符串)')
     body2 = db.Column(db.Text, comment='环境2请求体(JSON字符串)')
-    diff_result = db.Column(db.Text, comment='最近一次对比结果(JSON,截取前2000字符)')
+    diff_result = db.Column(LONGTEXT, comment='最近一次对比结果(JSON)')
     sort_order = db.Column(db.Integer, default=0, comment='排序序号')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')

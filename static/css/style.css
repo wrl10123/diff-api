@@ -831,6 +831,11 @@ pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; ov
 .test-case-item.active { background: #d0e2ff; border-color: #8ab4f8; }
 .test-case-item .tc-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .test-case-item .tc-time { color: #aaa; font-size: 11px; white-space: nowrap; }
+.test-case-item .tc-edit {
+    padding: 1px 6px; font-size: 11px; background: none; border: none;
+    color: #ccc; cursor: pointer; border-radius: 3px;
+}
+.test-case-item .tc-edit:hover { background: #fff3cd; color: #856404; }
 .test-case-item .tc-delete {
     padding: 1px 6px; font-size: 11px; background: none; border: none;
     color: #ccc; cursor: pointer; border-radius: 3px;

@@ -59,7 +59,7 @@ export async function loadTestCases(apiId, apiEl) {
             <div class="test-case-item" data-tc-id="${tc.id}" onclick="event.stopPropagation();applyTestCaseById(${tc.id})" title="点击加载此用例">
                 <span>&#128736;</span>
                 <span class="tc-name">${esc(tc.name)}</span>
-                
+                <button class="tc-edit" onclick="event.stopPropagation();editTestCaseName(${tc.id}, this)" title="编辑名称">✏️</button>
                 <button class="tc-delete" onclick="event.stopPropagation();deleteTestCase(${tc.id}, this)" title="删除">🗑️</button>
             </div>
         `).join('');
@@ -315,8 +315,40 @@ export async function deleteTestCase(tcId, btnEl) {
     }
 }
 
+/**
+ * 编辑用例名称
+ * @param {number} tcId - 测试用例ID
+ * @param {HTMLElement} btnEl - 按钮元素
+ */
+export async function editTestCaseName(tcId, btnEl) {
+    const tc = _testCaseCache[tcId];
+    if (!tc) return alert('用例数据未找到');
+    
+    const newName = prompt('请输入新的用例名称：', tc.name);
+    if (!newName || newName.trim() === '') return;
+    
+    try {
+        const res = await fetch('/api/test-cases/' + tcId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName.trim() })
+        });
+        const result = await res.json();
+        if (result.success) {
+            tc.name = newName.trim();
+            const nameEl = btnEl.closest('.test-case-item').querySelector('.tc-name');
+            if (nameEl) nameEl.textContent = newName.trim();
+        } else {
+            alert('更新失败: ' + (result.error || '未知错误'));
+        }
+    } catch(e) {
+        alert('请求失败: ' + e.message);
+    }
+}
+
 // 暴露到window供HTML内联事件使用
 window.applyTestCaseById = applyTestCaseById;
 window.saveTestCase = saveTestCase;
 window.deleteTestCase = deleteTestCase;
+window.editTestCaseName = editTestCaseName;
 window.initTestCaseTracker = initTestCaseTracker;

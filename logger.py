@@ -50,17 +50,24 @@ def setup_logging(app):
         '[%(asctime)s] %(levelname)s: %(message)s'
     ))
     
-    # 添加处理器
+    # 添加处理器到app.logger
     app.logger.addHandler(file_handler)
     app.logger.addHandler(console_handler)
     app.logger.setLevel(log_level)
     
+    # 配置 root logger，让所有模块都能使用
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    root_logger.setLevel(log_level)
+    
     # 配置 SQLAlchemy SQL 日志输出到文件
-    sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
-    sqlalchemy_logger.handlers.clear()
-    sqlalchemy_logger.addHandler(file_handler)
-    sqlalchemy_logger.setLevel(logging.INFO)
-    sqlalchemy_logger.propagate = False
+    # sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+    # sqlalchemy_logger.handlers.clear()
+    # sqlalchemy_logger.addHandler(file_handler)
+    # sqlalchemy_logger.setLevel(logging.INFO)
+    # sqlalchemy_logger.propagate = False
     
     # 请求日志中间件
     @app.before_request
