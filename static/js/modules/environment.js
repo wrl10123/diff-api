@@ -5,7 +5,7 @@ import { esc } from './utils.js';
 import { openModal, closeModal } from './modal.js';
 import { currentProjectId, sortState } from './project.js';
 import { setFieldValue, getFieldValue } from './kvInput.js';
-import { getEnvDataCache, setEnvDataCache } from './state.js';
+import { getEnvDataCache, setEnvDataCache, getApiHeadersCache, getApiBodyCache } from './state.js';
 import { initTracker, markClean, updateButton } from './dirtyTracker.js';
 import { makeSortable } from './sortable.js';
 
@@ -304,17 +304,55 @@ export function onEnvChange(side, updateHeadersBody = true) {
     const sel = document.getElementById('env' + side + 'Select');
     const urlInput = document.getElementById('url' + side);
     const envId = sel?.value || '';
+    
+    // 使用 window.currentTestCaseId 替代 getCurrentTestCaseId()，避免模块状态不同步
+    const testCaseId = window.currentTestCaseId;
+    console.log('onEnvChange called:', { side, updateHeadersBody, envId, testCaseId });
+    
     if (envId) {
         const env = envDataCache.find(e => e.id == envId);
         if (env) {
-            // 从自定义下拉框获取 API 路径
             const apiId = document.getElementById('diffApiSelect')?.value;
             const selectedApiOption = document.querySelector(`#diffApiMenu .custom-dropdown-option[data-value="${apiId}"]`);
             const apiPath = selectedApiOption?.dataset?.path || '';
             urlInput.value = env.base_url.replace(/[/]+$/, '') + apiPath;
+            
             if (updateHeadersBody) {
-                setFieldValue('headers' + side, env.default_headers || '{}');
-                setFieldValue('body' + side, env.default_body || '{}');
+                // 获取环境默认值
+                let envHeaders = {}, envBody = {};
+                try { envHeaders = JSON.parse(env.default_headers || '{}'); } catch { }
+                try { envBody = JSON.parse(env.default_body || '{}'); } catch { }
+                
+                if (testCaseId) {
+                    // 选中用例模式：切换环境时，合并新环境默认值 + API headers
+                    // 然后用例的自定义 headers 会覆盖 API headers
+                    console.log('用例模式：更新headers为新环境默认值 + API headers');
+                    const apiHeaders = getApiHeadersCache();
+                    const apiBody = getApiBodyCache();
+                    
+                    setFieldValue('headers' + side, { ...envHeaders, ...apiHeaders });
+                    setFieldValue('body' + side, { ...envBody, ...apiBody });
+                    
+                    // 标记保存按钮为高亮
+                    const btn = document.getElementById('saveCaseBtn');
+                    if (btn) {
+                        btn.classList.remove('btn-disabled');
+                        btn.disabled = false;
+                    }
+                } else if (apiId) {
+                    // 选中API模式：合并环境默认值 + API headers
+                    console.log('API模式：更新headers');
+                    const apiHeaders = getApiHeadersCache();
+                    const apiBody = getApiBodyCache();
+                    
+                    setFieldValue('headers' + side, { ...envHeaders, ...apiHeaders });
+                    setFieldValue('body' + side, { ...envBody, ...apiBody });
+                } else {
+                    // 无API选中：只使用环境默认值
+                    console.log('无API模式：使用环境默认值');
+                    setFieldValue('headers' + side, env.default_headers || '{}');
+                    setFieldValue('body' + side, env.default_body || '{}');
+                }
             }
         }
     }

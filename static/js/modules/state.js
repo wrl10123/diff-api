@@ -16,7 +16,9 @@ const state = {
     variableCache: [],
     lastDiffResult: null,
     folderExpandState: new Map(),
-    testCaseCache: {}
+    testCaseCache: {},
+    apiHeadersCache: {},
+    apiBodyCache: {}
 };
 
 // 状态访问器（公开）
@@ -32,7 +34,10 @@ export const getCurrentGroupId = () => state.currentGroupId;
 export const setCurrentGroupId = (id) => { state.currentGroupId = id; };
 
 export const getCurrentTestCaseId = () => state.currentTestCaseId;
-export const setCurrentTestCaseId = (id) => { state.currentTestCaseId = id; };
+export const setCurrentTestCaseId = (id) => { 
+    state.currentTestCaseId = id; 
+    window.currentTestCaseId = id; // 同步到window供onEnvChange使用
+};
 
 export const getCurrentApiId = () => state.currentApiId;
 export const setCurrentApiId = (id) => { state.currentApiId = id; };
@@ -60,6 +65,12 @@ export const getFolderExpandStateById = (id) => state.folderExpandState.get(id);
 export const getTestCaseCache = () => state.testCaseCache;
 export const setTestCaseCache = (id, data) => { state.testCaseCache[id] = data; };
 export const getTestCaseById = (id) => state.testCaseCache[id];
+
+export const getApiHeadersCache = () => state.apiHeadersCache;
+export const setApiHeadersCache = (data) => { state.apiHeadersCache = data || {}; };
+
+export const getApiBodyCache = () => state.apiBodyCache;
+export const setApiBodyCache = (data) => { state.apiBodyCache = data || {}; };
 
 // 批量重置状态
 export const resetState = () => {

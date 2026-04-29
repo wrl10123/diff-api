@@ -6,7 +6,7 @@ import { setFieldValue, getFieldJsonValue } from './kvInput.js';
 import { renderDiffResult } from './diff.js';
 import { makeSortable } from './sortable.js';
 import { onEnvChange } from './environment.js';
-import { setCurrentTestCaseId, getCurrentTestCaseId, getLastDiffResult, getCurrentGroupId } from './state.js';
+import { setCurrentTestCaseId, getCurrentTestCaseId, getLastDiffResult, getCurrentGroupId, setApiHeadersCache, setApiBodyCache } from './state.js';
 import { initTracker, markClean, updateButton } from './dirtyTracker.js';
 
 const TRACKER_ID = 'testCase';
@@ -107,7 +107,9 @@ export function applyTestCaseById(tcId) {
  * @param {Object} tc - 测试用例对象
  */
 export function applyTestCase(tc) {
+    console.log('applyTestCase called:', tc.id, tc.name);
     setCurrentTestCaseId(tc.id);
+    console.log('setCurrentTestCaseId called, window.currentTestCaseId:', window.currentTestCaseId);
 
     // 更新 API 下拉框
     const hiddenApi = document.getElementById('diffApiSelect');
@@ -139,6 +141,7 @@ export function applyTestCase(tc) {
             document.querySelectorAll('#env1Menu .custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
             selectedEnv1Option.classList.add('selected');
         }
+        // 只更新URL，不更新headers
         onEnvChange(1, false);
     }
     
@@ -157,8 +160,24 @@ export function applyTestCase(tc) {
             document.querySelectorAll('#env2Menu .custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
             selectedEnv2Option.classList.add('selected');
         }
+        // 只更新URL，不更新headers
         onEnvChange(2, false);
     }
+
+    // 缓存 API headers 和 body（从用例的 headers 中提取 API 部分）
+    // 用例的 headers 已经包含了环境默认值 + API headers，我们需要提取 API headers
+    // 这里简化处理，直接用用例的 headers 作为 API headers
+    let apiHeaders = {}, apiBody = {};
+    try { apiHeaders = JSON.parse(tc.headers1 || '{}'); } catch { }
+    try { apiBody = JSON.parse(tc.body1 || '{}'); } catch { }
+    setApiHeadersCache(apiHeaders);
+    setApiBodyCache(apiBody);
+
+    // 加载用例的headers和body
+    setFieldValue('headers1', tc.headers1 || '{}');
+    setFieldValue('headers2', tc.headers2 || '{}');
+    setFieldValue('body1', tc.body1 || '{}');
+    setFieldValue('body2', tc.body2 || '{}');
 
     document.getElementById('url1').value = tc.url1 || '';
     document.getElementById('url2').value = tc.url2 || '';
@@ -171,11 +190,6 @@ export function applyTestCase(tc) {
         methodBadge.textContent = method;
     }
     document.getElementById('method').value = method;
-
-    setFieldValue('headers1', tc.headers1 || '{}');
-    setFieldValue('headers2', tc.headers2 || '{}');
-    setFieldValue('body1', tc.body1 || '{}');
-    setFieldValue('body2', tc.body2 || '{}');
 
     document.getElementById('saveCaseBtn').textContent = '更新用例';
 

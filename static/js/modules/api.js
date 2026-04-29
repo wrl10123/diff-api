@@ -9,7 +9,7 @@ import { loadFolders } from './folder.js';
 import { onEnvChange } from './environment.js';
 import {
     getCurrentFolderId, getCurrentTestCaseId, setCurrentTestCaseId,
-    getEnvDataCache, findEnvById
+    getEnvDataCache, findEnvById, setApiHeadersCache, setApiBodyCache
 } from './state.js';
 import { initTracker, markClean, updateButton } from './dirtyTracker.js';
 import { initTestCaseTracker } from './testCase.js';
@@ -183,7 +183,6 @@ export function selectApiForDiff(apiId) {
             textEl.textContent = selectedOption.textContent;
             textEl.classList.add('has-value');
         }
-        // 更新选中状态
         document.querySelectorAll('#diffApiMenu .custom-dropdown-option').forEach(opt => opt.classList.remove('selected'));
         selectedOption.classList.add('selected');
     }
@@ -210,6 +209,10 @@ export function selectApiForDiff(apiId) {
     try { queryParams = JSON.parse(stripJsonComments(nameEl.dataset.queryParams || '{}')); } catch { }
     
     currentQueryParams = queryParams;
+    
+    // 缓存 API headers 和 body
+    setApiHeadersCache(apiHeaders);
+    setApiBodyCache(apiBody);
 
     // 更新请求方法下拉框
     const methodBadge = document.querySelector(`#methodToggle .method-badge`);
@@ -223,28 +226,37 @@ export function selectApiForDiff(apiId) {
     const sel2 = document.getElementById('env2Select');
     const envCache = getEnvDataCache();
 
-    if (!sel1.value && envCache.length > 0) sel1.value = envCache[0].id;
-    if (!sel2.value && envCache.length > 1) sel2.value = envCache[1].id;
-    else if (!sel2.value && envCache.length > 0) sel2.value = envCache[0].id;
+    // 设置默认环境（第一个和第二个）
+    if (envCache.length > 0) {
+        sel1.value = envCache[0].id;
+        sel2.value = envCache.length > 1 ? envCache[1].id : envCache[0].id;
+        
+        // 更新环境下拉框显示文本
+        const text1 = document.querySelector('#env1Toggle .custom-dropdown-text');
+        const text2 = document.querySelector('#env2Toggle .custom-dropdown-text');
+        if (text1) {
+            text1.textContent = envCache[0].name;
+            text1.classList.add('has-value');
+        }
+        if (text2 && envCache.length > 1) {
+            text2.textContent = envCache[1].name;
+            text2.classList.add('has-value');
+        }
+        
+        // 更新选中状态
+        document.querySelectorAll('#env1Menu .custom-dropdown-option').forEach(opt => {
+            opt.classList.toggle('selected', opt.dataset.value == envCache[0].id);
+        });
+        document.querySelectorAll('#env2Menu .custom-dropdown-option').forEach(opt => {
+            opt.classList.toggle('selected', opt.dataset.value == (envCache.length > 1 ? envCache[1].id : envCache[0].id));
+        });
+    }
 
-    onEnvChange(1, false);
-    onEnvChange(2, false);
+    // 调用 onEnvChange 会自动合并环境默认值 + API headers
+    onEnvChange(1, true);
+    onEnvChange(2, true);
 
     for (const side of [1, 2]) {
-        const envId = document.getElementById('env' + side + 'Select').value;
-        let envHeaders = {}, envBody = {};
-
-        if (envId) {
-            const env = findEnvById(envId);
-            if (env) {
-                try { envHeaders = JSON.parse(env.default_headers || '{}'); } catch { }
-                try { envBody = JSON.parse(env.default_body || '{}'); } catch { }
-            }
-        }
-
-        setFieldValue('headers' + side, { ...envHeaders, ...apiHeaders });
-        setFieldValue('body' + side, { ...envBody, ...apiBody });
-        
         updateParamsDisplay(side, queryParams);
     }
     
@@ -354,6 +366,10 @@ function onDiffApiChange(apiData = null) {
         try { apiBody = JSON.parse(stripJsonComments(selectedOption.dataset.body || '{}')); } catch { apiBody = {}; }
     }
 
+    // 缓存 API headers 和 body
+    setApiHeadersCache(apiHeaders);
+    setApiBodyCache(apiBody);
+
     // 更新请求方法下拉框显示
     const methodBadge = document.querySelector(`#methodToggle .method-badge`);
     if (methodBadge) {
@@ -362,9 +378,23 @@ function onDiffApiChange(apiData = null) {
     }
     document.getElementById('method').value = apiMethod;
     
+    // 更新 headers 和 body：环境默认值 + API headers
+    const envCache = getEnvDataCache();
+    
     for (const side of [1, 2]) {
-        setFieldValue('headers' + side, { ...getFieldJsonValue('headers' + side), ...apiHeaders });
-        setFieldValue('body' + side, Object.keys(apiBody).length > 0 ? apiBody : getFieldJsonValue('body' + side));
+        const envId = document.getElementById('env' + side + 'Select').value;
+        let envHeaders = {}, envBody = {};
+        
+        if (envId) {
+            const env = envCache.find(e => e.id == envId);
+            if (env) {
+                try { envHeaders = JSON.parse(env.default_headers || '{}'); } catch { }
+                try { envBody = JSON.parse(env.default_body || '{}'); } catch { }
+            }
+        }
+        
+        setFieldValue('headers' + side, { ...envHeaders, ...apiHeaders });
+        setFieldValue('body' + side, { ...envBody, ...apiBody });
     }
 
     const env1Id = document.getElementById('env1Select').value;

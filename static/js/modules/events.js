@@ -160,9 +160,9 @@ export function initEventDelegation() {
             if (menu.id === 'diffApiMenu') {
                 window.onDiffApiChange?.();
             } else if (menu.id === 'env1Menu') {
-                window.onEnvChange?.(1, false);
+                window.onEnvChange?.(1, true);
             } else if (menu.id === 'env2Menu') {
-                window.onEnvChange?.(2, false);
+                window.onEnvChange?.(2, true);
             }
             return;
         }

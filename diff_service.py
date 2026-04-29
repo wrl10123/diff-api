@@ -4,6 +4,7 @@ API对比服务
 import requests
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ class DiffService:
     
     def diff(self, url1, url2, method='POST', headers1=None, headers2=None, body1=None, body2=None):
         """
-        执行两个API的对比
+        执行两个API的对比（异步并发请求）
         
         Args:
             url1: 环境1 URL
@@ -52,21 +53,29 @@ class DiffService:
             'error': None
         }
         
-        # 发送请求到环境1
-        try:
-            response1 = self._send_request(url1, method, headers1, body1)
-            result['response1'] = response1
-        except Exception as e:
-            result['error'] = f'环境1请求失败: {str(e)}'
-            return result
-        
-        # 发送请求到环境2
-        try:
-            response2 = self._send_request(url2, method, headers2, body2)
-            result['response2'] = response2
-        except Exception as e:
-            result['error'] = f'环境2请求失败: {str(e)}'
-            return result
+        # 异步并发请求两个环境
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future1 = executor.submit(self._send_request, url1, method, headers1, body1)
+            future2 = executor.submit(self._send_request, url2, method, headers2, body2)
+            
+            response1 = None
+            response2 = None
+            
+            for future in as_completed([future1, future2]):
+                if future == future1:
+                    try:
+                        response1 = future.result()
+                        result['response1'] = response1
+                    except Exception as e:
+                        result['error'] = f'环境1请求失败: {str(e)}'
+                        return result
+                elif future == future2:
+                    try:
+                        response2 = future.result()
+                        result['response2'] = response2
+                    except Exception as e:
+                        result['error'] = f'环境2请求失败: {str(e)}'
+                        return result
         
         # 执行对比
         diff = self._compare(response1, response2)
