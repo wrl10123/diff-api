@@ -324,14 +324,11 @@ export function onEnvChange(side, updateHeadersBody = true) {
                 try { envBody = JSON.parse(env.default_body || '{}'); } catch { }
                 
                 if (testCaseId) {
-                    // 选中用例模式：切换环境时，合并新环境默认值 + API headers
-                    // 然后用例的自定义 headers 会覆盖 API headers
-                    console.log('用例模式：更新headers为新环境默认值 + API headers');
-                    const apiHeaders = getApiHeadersCache();
-                    const apiBody = getApiBodyCache();
-                    
-                    setFieldValue('headers' + side, { ...envHeaders, ...apiHeaders });
-                    setFieldValue('body' + side, { ...envBody, ...apiBody });
+                    // 选中用例模式：切换环境时，只使用新环境的headers
+                    // 标记保存按钮为高亮，提示用户需要保存
+                    console.log('用例模式：只使用新环境的headers');
+                    setFieldValue('headers' + side, env.default_headers || '{}');
+                    setFieldValue('body' + side, env.default_body || '{}');
                     
                     // 标记保存按钮为高亮
                     const btn = document.getElementById('saveCaseBtn');

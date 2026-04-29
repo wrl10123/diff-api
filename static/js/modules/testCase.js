@@ -6,7 +6,7 @@ import { setFieldValue, getFieldJsonValue } from './kvInput.js';
 import { renderDiffResult } from './diff.js';
 import { makeSortable } from './sortable.js';
 import { onEnvChange } from './environment.js';
-import { setCurrentTestCaseId, getCurrentTestCaseId, getLastDiffResult, getCurrentGroupId, setApiHeadersCache, setApiBodyCache } from './state.js';
+import { setCurrentTestCaseId, getCurrentTestCaseId, getLastDiffResult, getCurrentGroupId } from './state.js';
 import { initTracker, markClean, updateButton } from './dirtyTracker.js';
 
 const TRACKER_ID = 'testCase';
@@ -163,15 +163,6 @@ export function applyTestCase(tc) {
         // 只更新URL，不更新headers
         onEnvChange(2, false);
     }
-
-    // 缓存 API headers 和 body（从用例的 headers 中提取 API 部分）
-    // 用例的 headers 已经包含了环境默认值 + API headers，我们需要提取 API headers
-    // 这里简化处理，直接用用例的 headers 作为 API headers
-    let apiHeaders = {}, apiBody = {};
-    try { apiHeaders = JSON.parse(tc.headers1 || '{}'); } catch { }
-    try { apiBody = JSON.parse(tc.body1 || '{}'); } catch { }
-    setApiHeadersCache(apiHeaders);
-    setApiBodyCache(apiBody);
 
     // 加载用例的headers和body
     setFieldValue('headers1', tc.headers1 || '{}');
