@@ -41,10 +41,20 @@ export async function saveProject() {
     const name = document.getElementById('projectName').value.trim();
     if (!name) return alert('请输入项目名称');
     const payload = { name, description: document.getElementById('projectDesc').value.trim() };
+    
     if (id) {
         await fetch('/api/projects/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     } else {
-        await fetch('/api/projects', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const res = await fetch('/api/projects', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        // 新建项目后，自动创建默认目录
+        if (data.success && data.id) {
+            await fetch('/api/projects/' + data.id + '/folders', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ name: '新建文件夹', description: '' })
+            });
+        }
     }
     closeModal('projectModal');
     loadProjects();
