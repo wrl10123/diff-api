@@ -33,31 +33,33 @@
 ```
 diffapi/
 ├── app.py                 # Flask 主入口
-├── config.py              # 配置管理（环境变量）
-├── models.py              # SQLAlchemy 数据模型
-├── diff_service.py        # API对比服务
-├── import_service.py      # 导入服务入口
-├── utils.py               # 工具函数
-├── logger.py              # 日志配置
-├── migrations.py          # 数据库迁移模块
 ├── requirements.txt       # Python 依赖
 │
-├── routes/                # 路由模块
-│   ├── __init__.py        # Blueprint 注册
-│   ├── projects.py        # 项目管理
-│   ├── folders.py         # 目录管理
-│   ├── apis.py            # API管理
-│   ├── environments.py    # 环境管理
-│   ├── test_cases.py      # 测试用例
-│   ├── variables.py       # 变量管理
-│   ├── diff.py            # 对比执行
-│   ├── import_routes.py   # 导入路由
-│   └── error_log.py       # 错误日志
-│
-├── services/              # 服务模块
-│   ├── __init__.py
-│   ├── openapi_import.py  # OpenAPI导入
-│   └── postman_import.py  # Postman导入
+├── src/                   # 源代码目录
+│   ├── config.py              # 配置管理（环境变量）
+│   ├── models.py              # SQLAlchemy 数据模型
+│   ├── diff_service.py        # API对比服务
+│   ├── import_service.py      # 导入服务入口
+│   ├── utils.py               # 工具函数
+│   ├── logger.py              # 日志配置
+│   ├── migrations.py          # 数据库迁移模块
+│   │
+│   ├── routes/                # 路由模块
+│   │   ├── __init__.py        # Blueprint 注册
+│   │   ├── projects.py        # 项目管理
+│   │   ├── folders.py         # 目录管理
+│   │   ├── apis.py            # API管理
+│   │   ├── environments.py    # 环境管理
+│   │   ├── test_cases.py      # 测试用例
+│   │   ├── variables.py       # 变量管理
+│   │   ├── diff.py            # 对比执行
+│   │   ├── import_routes.py   # 导入路由
+│   │   └── error_log.py       # 错误日志
+│   │
+│   └── services/              # 服务模块
+│       ├── __init__.py
+│       ├── openapi_import.py  # OpenAPI导入
+│       └── postman_import.py  # Postman导入
 │
 ├── templates/
 │   └── index.html         # 单页应用模板
@@ -86,6 +88,10 @@ diffapi/
 │
 ├── database/              # 数据库相关
 │   └── migrations/        # 迁移脚本
+│
+├── logs/                  # 日志文件
+│
+├── instance/              # Flask 实例目录
 │
 ├── .env                   # 环境配置（不提交）
 ├── .env.example           # 环境配置模板

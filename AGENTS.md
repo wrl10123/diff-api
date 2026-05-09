@@ -15,11 +15,14 @@ DiffAPI 是一个基于 Flask 的 API 对比工具，用于对比同一接口在
 ### 后端
 
 - `app.py` - Flask 主入口
-- `models.py` - 数据模型（Project, ApiGroup, ApiConfig, Environment, TestCase, Variable）
-- `diff_service.py` - API 对比服务（支持并发请求）
-- `logger.py` - 日志配置（支持 root logger）
-- `migrations.py` - 安全数据库迁移
-- `routes/` - API 路由模块
+- `src/` - 源代码目录
+  - `config.py` - 配置管理（环境变量）
+  - `models.py` - 数据模型（Project, ApiGroup, ApiConfig, Environment, TestCase, Variable）
+  - `diff_service.py` - API 对比服务（支持并发请求）
+  - `logger.py` - 日志配置（支持 root logger）
+  - `migrations.py` - 安全数据库迁移
+  - `routes/` - API 路由模块
+  - `services/` - 导入服务模块
 
 ### 前端
 
