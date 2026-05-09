@@ -214,7 +214,8 @@ projects (项目)
 | `api_groups` | project_id, parent_id, name, sort_order |
 | `api_configs` | group_id, path, query_params, method, headers, body |
 | `environments` | project_id, name, base_url, default_headers, default_body |
-| `test_cases` | api_id, name, env1_id, env2_id, url1, url2, headers1, headers2, body1, body2 |
+| `test_cases` | api_id, name, env1_id, env2_id, url1, url2, headers1, headers2, body1, body2, diff_result (LONGTEXT) |
+| `diff_records` | api_id, env1_url, env2_url, env1_response, env2_response, diff_result (LONGTEXT) |
 | `variables` | project_id, name, value |
 
 ## 安全特性
@@ -247,7 +248,16 @@ pytest
 | v1.1 | 2026-04-09 | 添加拖拽排序功能 |
 | v1.2 | - | Diff 结果优化 |
 | v2.0 | 2026-04-17 | 大规模重构：模块化、配置分离、安全加固、SortableJS集成 |
+| v2.1 | 2026-05-09 | 环境切换功能优化：支持API/用例模式不同逻辑；数据库字段类型优化（LONGTEXT）；添加并发请求支持 |
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Security
+
+Please see [SECURITY.md](SECURITY.md) for security policy and reporting guidelines.
