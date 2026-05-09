@@ -3,10 +3,9 @@
 """
 from typing import Any, Dict, List, Optional
 from flask import request, jsonify, Response
-from models import db, ApiGroup
-from routes import folders_bp
-from utils import sanitize_input, validate_id, safe_json_dumps, validate_json_field
-from routes.projects import apply_sort
+from src.models import db, ApiGroup
+from src.routes import folders_bp
+from src.utils import sanitize_input, validate_id
 
 
 @folders_bp.route('/projects/<int:project_id>/folders', methods=['GET'])

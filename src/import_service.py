@@ -2,8 +2,8 @@
 导入服务模块 - 统一入口
 """
 from typing import Any, Dict
-from services.openapi_import import openapi_importer
-from services.postman_import import postman_importer
+from src.services.openapi_import import openapi_importer
+from src.services.postman_import import postman_importer
 
 
 class ImportService:

@@ -1,10 +1,9 @@
 """
 OpenAPI/Swagger 导入服务
 """
-import re
-from typing import Any, Dict, Optional
-from models import db, ApiGroup, ApiConfig, TestCase
-from utils import from_json, safe_json_dumps
+from typing import Any, Dict
+from src.models import db, ApiGroup, ApiConfig, TestCase
+from src.utils import from_json, safe_json_dumps
 
 
 class OpenAPIImporter:

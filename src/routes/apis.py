@@ -3,10 +3,10 @@ API配置管理路由
 """
 from typing import Any, Dict, List, Optional
 from flask import request, jsonify, Response
-from models import db, ApiConfig
-from routes import apis_bp
-from utils import sanitize_input, validate_id, safe_json_dumps, validate_json_field
-from routes.projects import apply_sort
+from src.models import db, ApiConfig
+from src.routes import apis_bp
+from src.utils import sanitize_input, safe_json_dumps, validate_json_field
+from src.routes.projects import apply_sort
 
 
 @apis_bp.route('/folders/<int:folder_id>/apis', methods=['GET'])

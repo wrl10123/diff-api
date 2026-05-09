@@ -15,7 +15,7 @@ def setup_logging(app):
     log_level = logging.DEBUG if app.debug else logging.INFO
     
     # 日志目录
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../logs')
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     

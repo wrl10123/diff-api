@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from config import get_config
-from models import db
-from routes import register_blueprints
-from logger import setup_logging
+from src.config import get_config
+from src.models import db
+from src.routes import register_blueprints
+from src.logger import setup_logging
 
 config = get_config()
 
@@ -40,7 +40,7 @@ def favicon():
 @app.route('/api/db/migrate', methods=['POST'])
 def db_migrate():
     """执行数据库迁移（添加新列）- 使用安全迁移模块"""
-    from migrations import run_migrations
+    from src.migrations import run_migrations
     from flask import jsonify
     
     try:
@@ -57,7 +57,7 @@ def db_migrate():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        from migrations import run_migrations
+        from src.migrations import run_migrations
         run_migrations(app)
     app.run(
         host=config.HOST,

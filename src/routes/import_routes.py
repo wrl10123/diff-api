@@ -3,9 +3,8 @@
 """
 from typing import Any, Dict
 from flask import request, jsonify, Response
-from routes import import_bp
-from import_service import import_service
-from utils import from_json
+from src.routes import import_bp
+from src.import_service import import_service
 
 
 @import_bp.route('/folders/<int:folder_id>/import-openapi', methods=['POST'])

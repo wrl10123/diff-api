@@ -1,11 +1,11 @@
 """
 变量管理路由
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from flask import request, jsonify, Response
-from models import db, Variable
-from routes import variables_bp
-from utils import sanitize_input
+from src.models import db, Variable
+from src.routes import variables_bp
+from src.utils import sanitize_input
 
 
 @variables_bp.route('/projects/<int:project_id>/variables', methods=['GET'])

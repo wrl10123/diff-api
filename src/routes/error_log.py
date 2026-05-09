@@ -2,7 +2,7 @@
 错误日志路由
 """
 from flask import request, jsonify, Response
-from routes import diff_bp
+from src.routes import diff_bp
 import logging
 
 logger = logging.getLogger(__name__)

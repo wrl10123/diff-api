@@ -4,10 +4,9 @@
 from typing import Any, Dict, List, Optional
 from flask import request, jsonify, Response
 from sqlalchemy.orm import Query
-from models import db, Project
-from routes import projects_bp
-from utils import sanitize_input, validate_id
-
+from src.models import db, Project
+from src.routes import projects_bp
+from src.utils import sanitize_input
 
 SORT_MAP = {
     'name_asc': lambda m: m.name.asc(),

@@ -4,8 +4,8 @@ Postman Collection 导入服务
 import re
 import json
 from typing import Any, Dict
-from models import db, ApiGroup, ApiConfig, Variable
-from utils import from_json, safe_json_dumps
+from src.models import db, ApiGroup, ApiConfig, Variable
+from src.utils import from_json, safe_json_dumps
 
 
 class PostmanImporter:

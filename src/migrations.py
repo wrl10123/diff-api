@@ -5,7 +5,7 @@ import re
 from typing import List, Tuple
 from sqlalchemy import inspect, text
 from flask import Flask
-from models import db
+from src.models import db
 
 
 ALLOWED_TABLES = {

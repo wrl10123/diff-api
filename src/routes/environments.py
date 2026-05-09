@@ -3,10 +3,10 @@
 """
 from typing import Any, Dict, List, Optional
 from flask import request, jsonify, Response
-from models import db, Environment
-from routes import environments_bp
-from utils import sanitize_input, safe_json_dumps, validate_json_field
-from routes.projects import apply_sort
+from src.models import db, Environment
+from src.routes import environments_bp
+from src.utils import sanitize_input, safe_json_dumps, validate_json_field
+from src.routes.projects import apply_sort
 
 
 @environments_bp.route('/projects/<int:project_id>/environments', methods=['GET'])

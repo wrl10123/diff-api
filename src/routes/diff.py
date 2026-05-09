@@ -3,10 +3,10 @@
 """
 from typing import Any, Dict, List
 from flask import request, jsonify, Response
-from models import db, DiffRecord
-from routes import diff_bp
-from utils import build_url
-from diff_service import DiffService
+from src.models import db, DiffRecord
+from src.routes import diff_bp
+from src.utils import build_url
+from src.diff_service import DiffService
 
 
 diff_service = DiffService()

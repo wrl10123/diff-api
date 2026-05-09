@@ -3,9 +3,9 @@
 """
 from typing import Any, Dict, List, Optional
 from flask import request, jsonify, Response
-from models import db, TestCase
-from routes import test_cases_bp
-from utils import sanitize_input, safe_json_dumps, validate_json_field, dump_json
+from src.models import db, TestCase
+from src.routes import test_cases_bp
+from src.utils import sanitize_input, dump_json
 
 
 @test_cases_bp.route('/apis/<int:api_id>/test-cases', methods=['GET'])
@@ -18,7 +18,7 @@ def get_test_cases(api_id: int) -> Response:
 @test_cases_bp.route('/apis/<int:api_id>/test-cases', methods=['POST'])
 def create_test_case(api_id: int) -> Response:
     """创建测试用例"""
-    from models import ApiConfig
+    from src.models import ApiConfig
     api: ApiConfig = ApiConfig.query.get_or_404(api_id)
     data: Dict[str, Any] = request.json or {}
     
